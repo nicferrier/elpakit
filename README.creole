@@ -18,6 +18,14 @@ An example:
 This should make a package archive in /tmp/shoesoffsaas which has
 the 4 packages in it.
 
+== Status ==
+
+This is very alpha code. That doesn't mean it's the best. It means
+it's crap.
+
+I'm only just getting this going. It is vital to my world view though,
+so do expect it to get better quickly.
+
 == Packaging ==
 
 To use elpakit your development tree must conform to a particular
@@ -101,8 +109,12 @@ The MELPA recipe standard has no:
 * doc
 * requires
 
-as far as I can see. These have been added to make the task of
+as far as I can see. These have been added to elpakit make the task of
 building tar files possible.
+
+A side aim for elpakit is that it makes defining a package part a
+function of the package's source control. Just like it normally is
+with other package systems (dpkg, rpm, pip, etc...).
 
 MELPA doesn't even need the version since it pulls it from the GIT
 commit?
