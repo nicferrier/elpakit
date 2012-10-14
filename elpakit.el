@@ -266,6 +266,7 @@ information necessary to build the archive-contents file."
             ;; Single file package
             (cons 'single (elpakit/build-single destination (car files))))))))))
 
+;;;###autoload
 (defun elpakit (destination package-list)
   (let* ((packages-list
           (loop for package in package-list
