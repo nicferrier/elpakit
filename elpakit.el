@@ -1,4 +1,4 @@
-;;; bildr.el --- package archive builder
+;;; elpakit.el --- package archive builder
 
 ;; Copyright (C) 2012  Nic Ferrier
 
