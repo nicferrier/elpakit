@@ -23,6 +23,22 @@
 
 ;; A package archive builder.
 
+;; This is for building file based package archives. This is useful
+;; for deploying small sets of under-development-packages in servers;
+;; for example elnode packages.
+
+;; An example:
+
+;; (elpakit
+;;  "/tmp/shoesoffsaas"
+;;  '("~/work/elnode-auth"
+;;    "~/work/emacs-db"
+;;    "~/work/shoes-off"
+;;    "~/work/rcirc-ssh"))
+
+;; This should make a package archive in /tmp/shoesoffsaas which has
+;; the 4 packages in it.
+
 ;;; Code:
 
 (require 'package)
@@ -273,7 +289,7 @@ information necessary to build the archive-contents file."
       (insert (format "%S" (cons 1 archive-list)))
       (save-buffer))))
 
-(provide 'bildr)
+(provide 'elpakit)
 
 
 ;;; bildr.el ends here
