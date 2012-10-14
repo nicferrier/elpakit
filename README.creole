@@ -1,0 +1,119 @@
+A package archive builder.
+
+This is for building file based package archives. This is useful
+for deploying small sets of under-development-packages in servers;
+for example elnode packages.
+
+An example:
+
+{{{
+(elpakit
+ "/tmp/shoesoffsaas"
+ '("~/work/elnode-auth"
+   "~/work/emacs-db"
+   "~/work/shoes-off"
+   "~/work/rcirc-ssh"))
+}}}
+
+This should make a package archive in /tmp/shoesoffsaas which has
+the 4 packages in it.
+
+== Packaging ==
+
+To use elpakit your development tree must conform to a particular
+standard.
+
+Packages are directorys with either:
+
+* a single elisp file in them which is the package file; a single-file
+  package is constructed from these
+
+* a single elisp file, which is the package file, and some form of
+  README file; a single-file package is constructed from these
+
+* a recipes directory containing a file named for the package (eg:
+  "elnode", it can also be different from the dev dir, eg: "emacs-db"
+  might have a "recipes/db" recipe file). The recipes file //broadly//
+  follows the MELPA conventions. It mostly specifies the {{{:files}}}
+  in the dev directory which belong to the package. 
+
+  There must be only one elisp file in the recipe for a recipe dev
+  directory to be considered a single-file package.
+
+* a recipes directory, just as above, but containing many elisp files;
+  these are considered tar packages and are built as such.
+
+
+== Recipe files ==
+
+The recipe format is based on the MELPA format but extended to include
+the extra meta-data required by tar packages.
+
+Here are some examples for now.
+
+{{{db}}} is a single file package, but the repository directory
+includes a tests file and the README:
+
+{{{
+(db
+ :files ("db.el"))
+}}}
+
+this is probably the most common form of recipe. It's needed quite a
+lot because there is not enough intelligence in elpakit about what is
+in a repository directory.
+
+{{{elnode}}} is a tar package and has quite a lot of complexity:
+
+{{{
+(elnode
+ :version "0.9.9.6.1"
+ :doc "The Emacs webserver."
+ :requires ((web "0.1.4")
+            (db "0.0.1")
+            (kv "0.0.9")
+            (fakir "0.0.14")
+            (creole "0.8.14"))
+ :files ("elnode.el" 
+         "elnode-tests.el"
+         "elnode-rle.el"
+         "elnode-wiki.el"
+         "default-wiki-index.creole"
+         "default-webserver-test.html"
+         "default-webserver-image.png"
+         "README.a"
+         "COPYING"))
+}}}
+
+
+== Notes on the differences with MELPA ==
+
+I hope to merge much of this with MELPA. The MELPA guys are cool, I
+think it will be doable.
+
+MELPA's code was not portable enough for me, quickly enough, to do
+what I needed. So I have duplicated lots of functionality. Hopefully
+we can de-duplicate in the future.
+
+The MELPA recipe standard has no:
+
+* version
+* doc
+* requires
+
+as far as I can see. These have been added to make the task of
+building tar files possible.
+
+MELPA doesn't even need the version since it pulls it from the GIT
+commit?
+
+
+== TODO ==
+
+* add more intelligence to {{{elpakit/do}}} to allow it to see
+  single-file package directories when:
+** there is a package lisp file, a README and a tests lisp file
+** there is a package lisp file, a README and a //package-name//-tests lisp file
+** any other oft-used combination that makes sense
+* add a constructor for recipe files?
+* add a mode for editing recipe files?
