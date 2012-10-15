@@ -175,12 +175,17 @@ The list is returned sorted and with absolute files."
        ,requires)))
 
 (defun elpakit/readme (recipe)
+  "Return the README for RECIPE or an empty string."
   (let ((readme
          (elpakit/mematch
           "README\\..*"
           (plist-get (cdr recipe) :files))))
-    (with-current-buffer (find-file-noselect (car readme))
-      (buffer-substring-no-properties (point-min)(point-max)))))
+    (if (and
+         (listp readme)
+         (> (length readme) 0))
+        (with-current-buffer (find-file-noselect (car readme))
+          (buffer-substring-no-properties (point-min)(point-max)))
+        "")))
 
 (defun elpakit/require-versionify (require-list)
   (mapcar
