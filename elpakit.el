@@ -257,14 +257,14 @@ information necessary to build the archive-contents file."
               ;; package-name-tests.el file
               (l (length files)))
          (cond
-           ((> l 2)
-            ;; it MUST be a multi-file package
-            (cons 'tar (elpakit/build-multi destination package-dir)))
            ((and
              (equal 2 l)
              readme)
             ;; Single file package with a README
             (cons 'single (elpakit/build-single destination package-dir)))
+           ((>= l 2)
+            ;; it MUST be a multi-file package
+            (cons 'tar (elpakit/build-multi destination package-dir)))
            (t
             ;; Single file package
             (cons 'single (elpakit/build-single destination (car files))))))))))
