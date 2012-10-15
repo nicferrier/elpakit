@@ -143,18 +143,16 @@ The list is returned sorted and with absolute files."
                            (package-buffer-info)))
            (name (elt package-info 0))
            (version (elt package-info 3))
-           (destdir (concat
-                     (file-name-as-directory destination)
-                     (file-name-as-directory
-                      (format "%s-%s" name version)))))
-      (unless (file-exists-p destdir)
-        (make-directory destdir t))
+           (qname (format "%s-%s" name version)))
+      (unless (file-exists-p destination)
+        (make-directory destination t))
       ;; Copy the actual lisp file
       (elpakit/copy
        single-file
-       (concat destdir (file-name-nondirectory single-file)))
-      ;; Write the package file
-      (elpakit/make-pkg-lisp destdir package-info)
+       (concat
+        (file-name-as-directory destination) qname ".el"))
+      ;; Write the package file - we don't need this?
+      ;;; (elpakit/make-pkg-lisp destination package-info)
       ;; And now the autoloads - stopped doing this coz it doesn't work
       ;;; (elpakit/autoloads name destdir)
       ;; Return the info
