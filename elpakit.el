@@ -247,6 +247,7 @@ The list is returned sorted and with absolute files."
         (let* ((recipe (elpakit/get-recipe package-dir))
                (files (elpakit/package-files recipe)))
           (loop for file in files
+             if (equal (file-name-extension file) "el")
              do
                (with-current-buffer
                    (find-file-noselect
