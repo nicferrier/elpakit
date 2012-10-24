@@ -134,6 +134,7 @@ The list is returned sorted and with absolute files."
   "Copy the file."
   (when (file-exists-p dest)
     (delete-file dest))
+  (message "elpakit/copy %s to %s" source dest)
   (copy-file source dest))
 
 (defun elpakit/build-single (destination single-file &optional readme)
