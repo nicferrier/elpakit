@@ -235,8 +235,27 @@ The list is returned sorted and with absolute files."
     ;; Return the info
     package-info))
 
+(defun elpakit/do-eval (package-dir)
+  "Just eval the elisp files in the packag in PACKAGE-DIR."
+  (assert (file-directory-p package-dir))
+  (let ((package-name
+         (file-name-sans-extension
+          (file-name-nondirectory package-dir))))
+    (if (elpakit/file-in-dir-p "recipes" package-dir)
+        ;; Find the list of files from the recipe
+        (let* ((recipe (elpakit/get-recipe package-dir))
+               (files (elpakit/package-files recipe)))
+          (loop for file in files
+             do
+               (with-current-buffer
+                   (find-file-noselect
+                    (expand-file-name file package-dir))
+                 (eval-buffer))))
+        ;; Else could we work out what the package file is?
+        )))
+
 (defun elpakit/do (destination package-dir)
-  "Put PACKAGE in DESTINATION.
+  "Put the package in PACKAGE-DIR in DESTINATION.
 
 Build the package if necessary.
 
@@ -246,31 +265,39 @@ information necessary to build the archive-contents file."
   (let ((package-name
          (file-name-sans-extension
           (file-name-nondirectory package-dir))))
-    (cond
-      ;; This provides MELPA recipe like support
-      ((elpakit/file-in-dir-p "recipes" package-dir)
-       ;; Find the list of files from the recipe
-       (let* ((recipe (elpakit/get-recipe package-dir))
-              (files (elpakit/package-files recipe))
-              (readme (elpakit/mematch "README\\..*" files))
-              ;; FIXME allow single file packages to have a tests or a
-              ;; package-name-tests.el file
-              (l (length files)))
-         (cond
-           ((and
-             (equal 2 l)
-             readme)
-            ;; Single file package with a README
-            (cons 'single (elpakit/build-single destination package-dir)))
-           ((>= l 2)
-            ;; it MUST be a multi-file package
-            (cons 'tar (elpakit/build-multi destination package-dir)))
-           (t
-            ;; Single file package
-            (cons 'single (elpakit/build-single destination (car files))))))))))
+    (if (elpakit/file-in-dir-p "recipes" package-dir)
+        ;; Find the list of files from the recipe
+        (let* ((recipe (elpakit/get-recipe package-dir))
+               (files (elpakit/package-files recipe))
+               (readme (elpakit/mematch "README\\..*" files))
+               ;; FIXME allow single file packages to have a tests or a
+               ;; package-name-tests.el file
+               (l (length files)))
+          (cond
+            ((and
+              (equal 2 l)
+              readme)
+             ;; Single file package with a README
+             (cons 'single (elpakit/build-single destination package-dir)))
+            ((or
+              (>= l 2)
+              (plist-get (cdr recipe) :version))
+             ;; it MUST be a multi-file package
+             (cons 'tar (elpakit/build-multi destination package-dir)))
+            (t
+             ;; Single file package
+             (cons 'single (elpakit/build-single destination (car files))))))
+        ;; Else we might be able to work out what is in the package
+        )))
+
+(defun elpakit-eval (package-list)
+  "Eval all the elisp files in PACKAGE-LIST."
+  (loop for package in package-list
+     do (elpakit/do-eval package)))
 
 ;;;###autoload
 (defun elpakit (destination package-list)
+  "Make a package archive at DESTINATION from PACKAGE-LIST."
   (let* ((packages-list
           (loop for package in package-list
              collect
