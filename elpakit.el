@@ -133,7 +133,9 @@ The list is returned sorted and with absolute files."
 (defun elpakit/copy (source dest)
   "Copy the file."
   (when (file-exists-p dest)
-    (delete-file dest))
+    (if (file-directory-p dest)
+        (delete-directory dest t)
+        (delete-file dest)))
   (message "elpakit/copy %s to %s" source dest)
   (copy-file source dest))
 
@@ -230,9 +232,11 @@ The list is returned sorted and with absolute files."
       (make-directory destination t))
     ;; Now we make the destination tarball
     (shell-command-to-string
-     (format "tar cf %s/%s.tar -C /tmp %s" destination qname qname))
-    ;;;; And now the autoloads - stopped doing this coz it doesn't work :-)
-    ;;; (elpakit/autoloads name destdir)
+     (format "tar cf /tmp/%s.tar -C /tmp %s" qname qname))
+    ;; Now copy to the destination
+    (elpakit/copy (format "/tmp/%s.tar" qname)
+                  (concat (file-name-as-directory destination)
+                          (format "%s.tar" qname)))
     ;; Return the info
     package-info))
 
