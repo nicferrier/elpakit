@@ -119,6 +119,60 @@ with other package systems (dpkg, rpm, pip, etc...).
 MELPA doesn't even need the version since it pulls it from the GIT
 commit?
 
+== Useful tips ==
+
+There are a bunch of useful things you can do if you're building apps
+that are collections of elpa packages.
+
+=== Evaling an elpakit ===
+
+You can build an elpakit entirely inside your emacs. This basically
+means just evaling all the lisp it finds.
+
+{{{
+(elpakit-eval   
+ '("~/work/elnode-auth"
+   "~/work/emacs-db"
+   "~/work/shoes-off"
+   "~/work/rcirc-ssh"))
+}}}
+
+Sometimes you have to muck about with the ordering of the kit to make
+it work because there are dependancies (requires) that don't work
+unless you eval things in a particular order.
+
+=== Defining kits to be reusable ===
+
+Just collecting the list of package directories into a list means you
+can do lots of different things with elpakit:
+
+{{{
+(defconst shoes-off-elpakit
+  '("~/work/shoes-off"
+    "~/work/rcirc-ssh"
+    "~/work/emacs-db"
+    "~/work/esxml"
+    "~/work/elnode-auth"
+    "~/work/emacs-kv"
+    "~/work/shoes-off-aas/talkapp"))
+}}}
+
+If you use a {{{defconst}}} then you can re-eval it more easily.
+
+
+=== Building kits remotely ===
+
+If you want to deploy to a remote host without pushing to an official
+repository you can still do that, just use tramp for the destination:
+
+{{{
+(elpakit
+ "/ssh:nic@livehost.example.com:apps/app1/app-elpa"
+ my-elpakit)
+}}}
+
+Presuming {{{my-elpakit}}} is an elpakit list. Elpakit uses a straight
+copy so tramp works fine.
 
 == TODO ==
 
