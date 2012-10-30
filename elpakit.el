@@ -77,9 +77,8 @@ Ensure the file list is sorted."
       (lambda (f)
         (expand-file-name
          (concat (file-name-as-directory package-dir) f)))
-      (sort
-       (plist-get (cdr recipe) :files)
-       'string<)))
+      ;;(sort (plist-get (cdr recipe) :files) 'string<)
+      (plist-get (cdr recipe) :files)))
     recipe))
 
 (defun elpakit/package-files (recipe)
@@ -331,4 +330,4 @@ information necessary to build the archive-contents file."
 (provide 'elpakit)
 
 
-;;; bildr.el ends here
+;;; elpakit.el ends here
