@@ -6,7 +6,7 @@
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6"))
-;; Version: 0.0.2
+;; Version: 0.0.3
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -297,6 +297,7 @@ information necessary to build the archive-contents file."
         ;; Else we might be able to work out what is in the package
         )))
 
+;;;###autoload
 (defun elpakit-eval (package-list)
   "Eval all the elisp files in PACKAGE-LIST."
   (loop for package in package-list
