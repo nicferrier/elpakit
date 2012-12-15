@@ -1,12 +1,12 @@
-;;; elpakit.el --- package archive builder
+<;;; elpakit.el --- package archive builder
 
 ;; Copyright (C) 2012  Nic Ferrier
 
 ;; Author: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Keywords: lisp
-;; Package-Requires: ((anaphora "0.0.6"))
-;; Version: 0.0.4
+;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
+;; Version: 0.0.5
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@
 ;;; Code:
 
 (require 'package)
+(require 'dash)
 (require 'cl)
 (require 'anaphora)
 
