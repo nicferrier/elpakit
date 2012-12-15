@@ -234,10 +234,8 @@ copy so tramp works fine.
 
 == TODO ==
 
-* add more intelligence to {{{elpakit/do}}} to allow it to see
-  single-file package directories when:
-** there is a package lisp file, a README and a tests lisp file
-** there is a package lisp file, a README and a //package-name//-tests lisp file
-** any other oft-used combination that makes sense
+* add more intelligence to {{{elpakit/do}}} to allow it to construct a recipe for multi-file packages
+** multiple, non-test lisp files could just be packaged
+** include any README and licence file
 * add a constructor for recipe files?
 * add a mode for editing recipe files?
