@@ -2,29 +2,32 @@ A package archive builder.
 
 This is for building file based package archives. This is useful
 for deploying small sets of under-development-packages in servers;
-for example elnode packages.
+for example elnode packages. 
+
+It's also useful for describing the work of building multi-file
+packages and for expressing some testing details.
 
 An example:
 
 {{{
-(elpakit
- "/tmp/shoesoffsaas"
- '("~/work/elnode-auth"
-   "~/work/emacs-db"
-   "~/work/shoes-off"
-   "~/work/rcirc-ssh"))
+(elpakit 
+     "/tmp/shoesoffsaas"    ;; the directory to make the archive in
+     '("~/work/elnode-auth" ;; the list of package directories
+       "~/work/emacs-db"
+       "~/work/shoes-off"
+       "~/work/rcirc-ssh"))
 }}}
 
-This should make a package archive in /tmp/shoesoffsaas which has
-the 4 packages in it.
+This should make a package archive in /tmp/shoesoffsaas which has the
+4 packages in it, it will //build// those packages first if they need
+to be built (building only really means something for tar packages).
+
 
 == Status ==
 
-This is very alpha code. That doesn't mean it's the best. It means
-it's crap.
+This is very early code and it's difficult to test a lot of it. It
+mostly works. You may find bugs. If you do please tell me.
 
-I'm only just getting this going. It is vital to my world view though,
-so do expect it to get better quickly.
 
 == Packaging ==
 
@@ -37,7 +40,8 @@ Packages are directorys with either:
   package is constructed from these
 
 * a single elisp file, which is the package file, and some form of
-  README file; a single-file package is constructed from these
+  README file; a single-file package is constructed from these.
+  Essentially the README is ignored.
 
 * a recipes directory containing a file named for the package (eg:
   "elnode", it can also be different from the dev dir, eg: "emacs-db"
@@ -45,7 +49,7 @@ Packages are directorys with either:
   follows the MELPA conventions. It mostly specifies the {{{:files}}}
   in the dev directory which belong to the package. 
 
-  There must be only one elisp file in the recipe for a recipe dev
+**  There must be only one elisp file in the recipe for a recipe dev
   directory to be considered a single-file package.
 
 * a recipes directory, just as above, but containing many elisp files;
@@ -67,9 +71,28 @@ includes a tests file and the README:
  :files ("db.el"))
 }}}
 
-this is probably the most common form of recipe. It's needed quite a
-lot because there is not enough intelligence in elpakit about what is
-in a repository directory.
+this is the simplest form of recipe. It should not be needed very
+often because there is enough intelligence in elpakit about what is in
+a repository directory to infer this recipe.
+
+elpakit can help with testing if you tell it about your test files and
+dependancies:
+
+{{{
+(web
+ :files 
+  ("web.el")
+ :test
+  (:requires
+    ((fakir "0.0.10")
+     (elnode "0.9"))
+   :files
+    ("web-test.el")))
+}}}
+
+This is still a single file recipe. The test file and it's //requires//
+are not needed for running the package, only testing it. Therefore
+they do not need to be packaged.
 
 {{{elnode}}} is a tar package and has quite a lot of complexity:
 
@@ -77,21 +100,29 @@ in a repository directory.
 (elnode
  :version "0.9.9.6.1"
  :doc "The Emacs webserver."
- :requires ((web "0.1.4")
-            (db "0.0.1")
-            (kv "0.0.9")
-            (fakir "0.0.14")
-            (creole "0.8.14"))
- :files ("elnode.el" 
-         "elnode-tests.el"
-         "elnode-rle.el"
-         "elnode-wiki.el"
-         "default-wiki-index.creole"
-         "default-webserver-test.html"
-         "default-webserver-image.png"
-         "README.a"
-         "COPYING"))
+ :requires 
+ ((web "0.1.4") ;; for rle
+  (creole "0.8.14") ;; for wiki
+  (db "0.0.1")
+  (kv "0.0.9"))
+ :files 
+ ("elnode.el" 
+  "elnode-rle.el"
+  "elnode-wiki.el"
+  "default-wiki-index.creole"
+  "default-webserver-test.html"
+  "default-webserver-image.png"
+  "README.creole"
+  "COPYING")
+ :test
+ (:requires 
+  ((fakir "0.0.14"))
+  :files
+  ("elnode-tests.el")))
 }}}
+
+Elnode is like this because it needs to deliver the default wiki
+pages, these obviously must be pacckaged.
 
 
 == Notes on the differences with MELPA ==
@@ -105,19 +136,28 @@ we can de-duplicate in the future.
 
 The MELPA recipe standard has no:
 
-* version
-* doc
-* requires
+* {{{version}}}
+* {{{doc}}}
+* {{{requires}}}
+* or {{{test}}} sections
 
-as far as I can see. These have been added to elpakit make the task of
-building tar files possible.
-
-A side aim for elpakit is that it makes defining a package part a
-function of the package's source control. Just like it normally is
-with other package systems (dpkg, rpm, pip, etc...).
+as far as I can see. These have been added to elpakit to make the task
+of building tar files possible.
 
 MELPA doesn't even need the version since it pulls it from the GIT
 commit?
+
+A side aim for elpakit is that it makes defining a package partly a
+function of the package's source control. Just like it normally is
+with other package systems (dpkg, rpm, pip, etc...).
+
+MELPA specifies the recipes elsewhere than the repository source
+control. It's obvious why this has happened, they needed to support
+people MELPA packaging repositories they did not have commit access
+to.
+
+I don't know how to solve this problem, maybe the MELPA guys could
+switch their code to autodetect repository provided recipes somehow?
 
 == Useful tips ==
 
@@ -141,6 +181,18 @@ Sometimes you have to muck about with the ordering of the kit to make
 it work because there are dependancies (requires) that don't work
 unless you eval things in a particular order.
 
+=== A remote elpakit destination ===
+
+Elpakit doesn't care what the destination is as long as it looks like
+a directory to Emacs. That means you can use TRAMP:
+
+{{{
+(elpakit "/ssh:my-remote-host.example.com/myapp-elpa/"
+   '("~/work/elnode-auth"
+     "~/work/emacs-db"
+     "~/work/shoes-off"))
+}}}
+
 === Defining kits to be reusable ===
 
 Just collecting the list of package directories into a list means you
@@ -155,6 +207,12 @@ can do lots of different things with elpakit:
     "~/work/elnode-auth"
     "~/work/emacs-kv"
     "~/work/shoes-off-aas/talkapp"))
+}}}
+
+Then you can:
+
+{{{
+(elpakit "~/my-app-elpa" shoes-off-elpakit)
 }}}
 
 If you use a {{{defconst}}} then you can re-eval it more easily.
