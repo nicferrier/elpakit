@@ -164,6 +164,23 @@ switch their code to autodetect repository provided recipes somehow?
 There are a bunch of useful things you can do if you're building apps
 that are collections of elpa packages.
 
+
+=== Building a tar package ===
+
+elpakit has all the logic to build multi-file packages so it made
+sense to make that available with a command:
+
+{{{
+M-x elpakit-make-multi
+}}}
+
+will use the directory you are in as a package directory (if it can be
+established that it is a package) or ask you to specify a package
+directory. It will then build that package for you in a temorary
+directory. It will open the temporary directory with the built package
+in it. You can use that to upload to Marmalade or some such.
+
+
 === Evaling an elpakit ===
 
 You can build an elpakit entirely inside your emacs. This basically
@@ -237,5 +254,7 @@ copy so tramp works fine.
 * add more intelligence to {{{elpakit/do}}} to allow it to construct a recipe for multi-file packages
 ** multiple, non-test lisp files could just be packaged
 ** include any README and licence file
+** include any dir file and info files?
+*** I've already forgotten how this works
 * add a constructor for recipe files?
 * add a mode for editing recipe files?

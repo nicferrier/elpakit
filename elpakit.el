@@ -1,4 +1,4 @@
-<;;; elpakit.el --- package archive builder
+;;; elpakit.el --- package archive builder
 
 ;; Copyright (C) 2012  Nic Ferrier
 
@@ -200,10 +200,11 @@ The list is returned sorted and with absolute files."
       (version-to-list (cadr elt))))
    require-list))
 
-(defun elpakit/build-multi (destination package-dir)
-  "Build a multi-file package into DESTINATION."
-  (let* ((recipe (elpakit/get-recipe package-dir))
-         (package-info
+(defun elpakit/build-multi (destination recipe)
+  "Build a multi-file package into DESTINATION.
+
+RECIPE specifies the package in a plist s-expression form."
+  (let* ((package-info
           (package-read-from-string
            (format "%S" (elpakit/recipe->package-decl recipe))))
          (files (elpakit/package-files recipe))
@@ -251,7 +252,7 @@ otherwise this asks you for a package directory.
 Opens the directory the package has been built in."
   (interactive
    (list
-    (if (directory-files default-directory nil "recipe")
+    (if (directory-files default-directory nil "^recipes$")
         default-directory
         (read-directory-name "Package-dir: " default-directory))))
   (let ((dir-flag t)
@@ -259,7 +260,7 @@ Opens the directory the package has been built in."
          (file-name-sans-extension
           (file-name-nondirectory package-dir)))
         (dest (make-temp-file package-name dir-flag "elpakit")))
-    (elpakit/build-multi dest package-dir)
+    (elpakit/build-multi dest (elpakit/get-recipe package-dir))
     (find-file dest)))
 
 (defun elpakit/do-eval (package-dir)
@@ -300,7 +301,9 @@ Opens the directory the package has been built in."
         (>= l 2)
         (plist-get (cdr recipe) :version))
        ;; it MUST be a multi-file package
-       (cons 'tar (elpakit/build-multi destination package-dir)))
+       (cons 'tar (elpakit/build-multi
+                   destination
+                   (elpakit/get-recipe package-dir))))
       (t
        ;; Single file package
        (cons 'single (elpakit/build-single destination (car files)))))))
@@ -347,7 +350,11 @@ information necessary to build the archive-contents file."
             ;; Else it's a multi-package and we can't do it yet
             ;;
             ;; FIXME - we could infer a lot about what to put in a
-            ;; package
+            ;; package:
+            ;;
+            ;; ** multiple, non-test lisp files could just be packaged
+            ;; ** include any README and licence file
+            ;; ** include any dir file and info files?
             (error
              "elpakit - cannot infer package for %s - add a recipe description"
              package-dir)))))
