@@ -34,7 +34,7 @@ mostly works. You may find bugs. If you do please tell me.
 To use elpakit your development tree must conform to a particular
 standard.
 
-Packages are directorys with either:
+Packages are directories with either:
 
 * a single elisp file in them which is the package file; a single-file
   package is constructed from these
