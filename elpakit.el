@@ -6,7 +6,7 @@
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
-;; Version: 0.0.5
+;; Version: 0.0.6
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
