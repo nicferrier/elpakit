@@ -255,11 +255,11 @@ Opens the directory the package has been built in."
     (if (directory-files default-directory nil "^recipes$")
         default-directory
         (read-directory-name "Package-dir: " default-directory))))
-  (let ((dir-flag t)
-        (package-name
-         (file-name-sans-extension
-          (file-name-nondirectory package-dir)))
-        (dest (make-temp-file package-name dir-flag "elpakit")))
+  (let* ((dir-flag t)
+         (package-name
+          (file-name-sans-extension
+           (file-name-nondirectory package-dir)))
+         (dest (make-temp-file package-name dir-flag "elpakit")))
     (elpakit/build-multi dest (elpakit/get-recipe package-dir))
     (find-file dest)))
 
