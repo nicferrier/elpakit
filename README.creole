@@ -48,7 +48,6 @@ Packages are directories with either:
   might have a "recipes/db" recipe file). The recipes file //broadly//
   follows the MELPA conventions. It mostly specifies the {{{:files}}}
   in the dev directory which belong to the package. 
-
 **  There must be only one elisp file in the recipe for a recipe dev
   directory to be considered a single-file package.
 
