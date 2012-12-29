@@ -257,3 +257,6 @@ copy so tramp works fine.
 *** I've already forgotten how this works
 * add a constructor for recipe files?
 * add a mode for editing recipe files?
+* add upstream repository list to a recipe
+** so that a package could specify where it's dependant repositorys can be found
+** this is mainly so a package could be installed from a url and specify that depends come from marmalade (for example)
