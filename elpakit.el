@@ -347,7 +347,13 @@ information necessary to build the archive-contents file."
              (elisp-files (elpakit/package-elisp-files package-dir)))
         ;; If we have just 1 elisp file it's easy - it's a single package
         (if (equal (length elisp-files) 1)
-            (elpakit/build-single destination (car elisp-files))
+            (cons
+             'single
+             (elpakit/build-single
+              destination
+              (concat
+               (file-name-as-directory package-dir)
+               (car elisp-files))))
             ;; Else it's a multi-package and we can't do it yet
             ;;
             ;; FIXME - we could infer a lot about what to put in a
