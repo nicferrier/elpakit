@@ -265,7 +265,7 @@ Opens the directory the package has been built in."
     (find-file dest)))
 
 (defun elpakit/do-eval (package-dir)
-  "Just eval the elisp files in the packag in PACKAGE-DIR."
+  "Just eval the elisp files in the package in PACKAGE-DIR."
   (assert (file-directory-p package-dir))
   (let ((package-name
          (file-name-sans-extension
