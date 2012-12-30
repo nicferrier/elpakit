@@ -394,8 +394,9 @@ information necessary to build the archive-contents file."
          (archive-dir (file-name-as-directory destination)))
     (unless (file-exists-p archive-dir)
       (make-directory archive-dir t))
-    (with-current-buffer (find-file-noselect
-                          (concat archive-dir "archive-contents"))
+    (with-current-buffer
+        (find-file-noselect
+         (concat archive-dir "archive-contents"))
       (erase-buffer)
       (insert (format "%S" (cons 1 archive-list)))
       (save-buffer))))
