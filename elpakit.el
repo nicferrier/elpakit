@@ -372,6 +372,17 @@ information necessary to build the archive-contents file."
   (loop for package in package-list
      do (elpakit/do-eval package)))
 
+(defun elpakit/packages-list->archive-list (packages-list)
+  "Turn the list of packages into an archive list."
+  (loop for (type . package) in packages-list
+     collect
+       (cons
+        (intern (elt package 0)) ; name
+        (vector (version-to-list (elt package 3)) ; version list
+                (elt package 1) ; requirements
+                (elt package 4) ; doc string
+                type))))
+
 ;;;###autoload
 (defun elpakit (destination package-list)
   "Make a package archive at DESTINATION from PACKAGE-LIST."
@@ -379,15 +390,7 @@ information necessary to build the archive-contents file."
           (loop for package in package-list
              collect
                (elpakit/do destination package)))
-         (archive-list
-          (loop for (type . package)  in packages-list
-             collect
-               (cons
-                (intern (elt package 0)) ; name
-                (vector (version-to-list (elt package 3)) ; version list
-                        (elt package 1) ; requirements
-                        (elt package 4) ; doc string
-                        type))))
+         (archive-list (elpakit/packages-list->archive-list packages-list))
          (archive-dir (file-name-as-directory destination)))
     (unless (file-exists-p archive-dir)
       (make-directory archive-dir t))
