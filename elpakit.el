@@ -50,11 +50,12 @@
 
 (defun elpakit/file-in-dir-p (filename dir)
   "Is FILENAME in DIR?"
-  (file-in-directory-p
-   (concat
-    (file-name-as-directory dir)
-    filename)
-   dir))
+  (let ((file (concat
+               (file-name-as-directory dir)
+               filename)))
+    (and
+     (file-in-directory-p file dir)
+     (file-exists-p file))))
 
 (defun elpakit/find-recipe (package-dir)
   "Find the recipe in PACKAGE-DIR."
