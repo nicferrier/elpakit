@@ -43,6 +43,11 @@ Packages are directories with either:
   README file; a single-file package is constructed from these.
   Essentially the README is ignored.
 
+* multiple elisp files where all but one elisp file is of the form:
+ {{{test*.el}}} or {{{*test.el}}}. The package is built from the one
+ elisp file remaining. A test package //may// be built from the test
+ files.
+
 * a recipes directory containing a file named for the package (eg:
   "elnode", it can also be different from the dev dir, eg: "emacs-db"
   might have a "recipes/db" recipe file). The recipes file //broadly//
@@ -53,7 +58,6 @@ Packages are directories with either:
 
 * a recipes directory, just as above, but containing many elisp files;
   these are considered tar packages and are built as such.
-
 
 == Recipe files ==
 
@@ -121,8 +125,16 @@ they do not need to be packaged.
 }}}
 
 Elnode is like this because it needs to deliver the default wiki
-pages, these obviously must be pacckaged.
+pages, these must be packaged so they can be installed at package
+deploy time.
 
+== Test packages ==
+
+Test packages can be defined in the recipe or automatically inferred
+through the presence of files matching the pattern {{{test.*.el}}} or
+{{{.*test.el}}}.
+
+Test packages are always named //package-name//{{{-test}}}.
 
 == Notes on the differences with MELPA ==
 

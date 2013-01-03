@@ -64,24 +64,95 @@
          (file-name-as-directory package-dir)
          "recipes") t "^[^#.]")))
 
+(defun elpakit/absolutize-file-name (package-dir file-name)
+  (expand-file-name
+   (concat (file-name-as-directory package-dir) file-name)))
+
+(defun elpakit/infer-files (package-dir)
+  "Infer the important files from PACKAGE-DIR
+
+Returns a plist with `:elisp-files', `:test-files' and
+`:non-test-elisp' filename lists.
+
+`:non-test-elisp' is absolutized, but the others are not."
+  (let* ((elisp-files (directory-files package-dir nil "^[^.#].*\\.el$"))
+         (test-files (elpakit/mematch
+                      "\\(test.*\\|.*test[s]*\\)\\.el$"
+                      elisp-files))
+         (non-test-elisp
+          (mapcar
+           (lambda (f)
+             (elpakit/absolutize-file-name package-dir f))
+           (-difference elisp-files test-files))))
+    (list
+     :elisp-files elisp-files
+     :test-files test-files
+     :non-test-elisp non-test-elisp)))
+
+(defun elpakit/infer-recipe (package-dir)
+  "Infer a recipe from the PACKAGE-DIR.
+
+We currently can't make guesses about multi-file packages so
+unless we can work out if the package is a single file package
+this function just errors.
+
+Test package files are guessed at to produce the :test section of
+the recipe.
+
+Files mentioned in the recipe are all absolute file names."
+  (destructuring-bind (&key elisp-files test-files non-test-elisp)
+      (elpakit/infer-files package-dir)
+    ;; Now choose what sort of recipe to build?
+    (if (equal (length non-test-elisp) 1)
+        (let ((name (car (elpakit/file->package (car non-test-elisp) :name))))
+          ;; Return the recipe with optional test section
+          (list*
+           name :files non-test-elisp
+           (when test-files
+             (list :test
+                   (list
+                    :files
+                    (mapcar
+                     (lambda (f)
+                       (elpakit/absolutize-file-name package-dir f))
+                     test-files))))))
+        ;; Can't infer a multi-file package right now.
+        ;;
+        ;; FIXME - we could infer a lot about what to put in a
+        ;; package:
+        ;;
+        ;; ** multiple, non-test lisp files could just be packaged
+        ;; ** include any README and licence file
+        ;; ** include any dir file and info files?
+        ;;
+        ;; the blocker is where to get the :version and :requires from.
+        (error
+         "elpakit - cannot infer package for %s - add a recipe description"
+         package-dir))))
+
 (defun elpakit/get-recipe (package-dir)
   "Returns the recipe for the PACKAGE-DIR.
 
-Ensure the file list is sorted."
-  (let* ((recipe-filename (elpakit/find-recipe package-dir))
-         (recipe (with-current-buffer (find-file-noselect recipe-filename)
-                   (goto-char (point-min))
-                   (read (current-buffer)))))
-    (plist-put
-     (cdr recipe)
-     :files
-     (mapcar
-      (lambda (f)
-        (expand-file-name
-         (concat (file-name-as-directory package-dir) f)))
-      ;;(sort (plist-get (cdr recipe) :files) 'string<)
-      (plist-get (cdr recipe) :files)))
-    recipe))
+Ensure the file list is sorted and consisting of absolute file
+names.
+
+If the recipe is not found as a file then we infer it from the
+PACKAGE-DIR with `elpakit/infer-recipe'."
+  (if (elpakit/file-in-dir-p "recipes" package-dir)
+      (let* ((recipe-filename (elpakit/find-recipe package-dir))
+             (recipe (with-current-buffer (find-file-noselect recipe-filename)
+                       (goto-char (point-min))
+                       (read (current-buffer)))))
+        (plist-put
+         (cdr recipe)
+         :files
+         (mapcar
+          (lambda (f) (elpakit/absolutize-file-name package-dir f))
+          ;;(sort (plist-get (cdr recipe) :files) 'string<)
+          (plist-get (cdr recipe) :files)))
+        recipe)
+      ;; Else infer it
+      (elpakit/infer-recipe package-dir)))
 
 (defun elpakit/package-files (recipe)
   "The list of files specified by the RECIPE.
@@ -119,20 +190,6 @@ The list is returned sorted and with absolute files."
       (insert (format "%S" lisp))
       (write-file filename))))
 
-(defun elpakit/autoloads (name destdir)
-  "Do all the necessary hacking to make autoloads save."
-  (let (find-file-hook
-        (delete-old-versions t)
-        (ffn (symbol-function 'find-file-noselect)))
-    (flet ((yes-or-no-p (prompt) t)
-           (y-or-n-p (prompt) t)
-           (ask-user-about-supersession-threat (fn) t)
-           (find-file-noselect (filename)
-             (awhen (get-buffer (file-name-nondirectory filename))
-               (kill-buffer it))
-             (funcall ffn filename t)))
-      (package-generate-autoloads name destdir))))
-
 (defun elpakit/copy (source dest)
   "Copy the file."
   (when (file-exists-p dest)
@@ -142,27 +199,56 @@ The list is returned sorted and with absolute files."
   (message "elpakit/copy %s to %s" source dest)
   (copy-file source dest))
 
-(defun elpakit/build-single (destination single-file &optional readme)
+(defun elpakit/file->package (file &rest selector)
+  "Convert FILE to package-info.
+
+Optionaly get a list of SELECTOR which is `:version', `:name',
+`:requires' or `t' for everything."
+  (with-current-buffer (find-file-noselect file)
+    (let* ((package-info
+            (save-excursion
+              (package-buffer-info))))
+      (if selector
+          (loop for select in selector
+             collect
+               (case select
+                 (:version (elt package-info 3))
+                 (:requires (elt package-info 1))
+                 (:name (intern (elt package-info 0)))
+                 (t package-info)))
+          ;; Else
+          package-info))))
+
+(defun elpakit/build-single (destination single-file &optional recipe)
   "Build a single file package into DESTINATION."
-  (with-current-buffer (find-file-noselect single-file)
-    (let* ((package-info (save-excursion
-                           (package-buffer-info)))
-           (name (elt package-info 0))
-           (version (elt package-info 3))
-           (qname (format "%s-%s" name version)))
-      (unless (file-exists-p destination)
-        (make-directory destination t))
-      ;; Copy the actual lisp file
-      (elpakit/copy
-       single-file
-       (concat
-        (file-name-as-directory destination) qname ".el"))
-      ;; Write the package file - we don't need this?
-      ;;; (elpakit/make-pkg-lisp destination package-info)
-      ;; And now the autoloads - stopped doing this coz it doesn't work
-      ;;; (elpakit/autoloads name destdir)
-      ;; Return the info
-      package-info)))
+  (destructuring-bind
+        (package-info name version)
+      (condition-case nil
+          (elpakit/file->package single-file t :name :version)
+        (error
+         (when recipe
+           (let* ((recipe-plist (cdr recipe))
+                  (package-name (symbol-name (car recipe)))
+                  (version (plist-get recipe-plist :version)))
+             (list
+              (vector package-name
+                      (elpakit/require-versionify
+                       (plist-get recipe-plist :requires)) ;; fixme - add base
+                      (concat "A package derived from " package-name)
+                      version
+                      "") ; commentary
+                    package-name
+                    version)))))
+    (unless (file-exists-p destination)
+      (make-directory destination t))
+    ;; Copy the actual lisp file
+    (elpakit/copy
+     single-file
+     (concat
+      (file-name-as-directory destination)
+      (format "%s-%s" name version) ".el"))
+    ;; Return the info
+    package-info))
 
 (defun elpakit/recipe->package-decl (recipe)
   "Convert a recipe into a package declaration."
@@ -284,87 +370,78 @@ Opens the directory the package has been built in."
         ;; Else could we work out what the package file is?
         )))
 
-(defun elpakit/with-recipe (destination package-dir)
-  "Handle an elpakit directory that has a recipe."
-  (let* ((recipe (elpakit/get-recipe package-dir))
-         (files (elpakit/package-files recipe))
-         (readme (elpakit/mematch "README\\..*" files))
-         ;; FIXME allow single file packages to have a tests or a
-         ;; package-name-tests.el file
-         (l (length files)))
-    (cond
-      ((and
-        (equal 2 l)
-        readme)
-       ;; Single file package with a README
-       (cons 'single (elpakit/build-single destination package-dir)))
-      ((or
-        (>= l 2)
-        (plist-get (cdr recipe) :version))
-       ;; it MUST be a multi-file package
-       (cons 'tar (elpakit/build-multi
-                   destination
-                   (elpakit/get-recipe package-dir))))
-      (t
-       ;; Single file package
-       (cons 'single (elpakit/build-single destination (car files)))))))
+(defun elpakit/build-recipe (destination recipe)
+  "Build the package with the RECIPE."
+  (let* ((recipe-plist (cdr recipe))
+         (files (plist-get recipe-plist :files)))
+    (if (>= (length files) 2)
+        ;; it MUST be a multi-file package
+        (cons 'tar (elpakit/build-multi destination recipe))
+        ;; Else it's a single file package
+        (cons 'single (elpakit/build-single
+                       destination (car files) recipe)))))
 
-(defun elpakit/package-elisp-files (package-dir)
-  "Make some guesses about files in PACKAGE-DIR.
+(defun elpakit/test-plist->recipe (package-dir)
+  "Turn the :test plist from PACKAGE-DIR into a proper recipe."
+  (let* ((base-recipe (elpakit/get-recipe package-dir))
+         (base-plist (cdr base-recipe))
+         (test-plist (plist-get base-plist :test))
+         (test-files
+          (mapcar
+           (lambda (f)
+             (if (file-name-absolute-p f) f
+                 (elpakit/absolutize-file-name package-dir f)))
+           (plist-get test-plist :files)))
+         (test-name (intern
+                     (file-name-sans-extension
+                      (file-name-nondirectory (car test-files)))))
+         (test-require (plist-get test-plist :requires))
+         (test-version
+          (or (plist-get base-plist :version)
+              (destructuring-bind
+                    (&key elisp-files test-files non-test-elisp)
+                  (elpakit/infer-files package-dir)
+                (car (elpakit/file->package
+                      (car non-test-elisp) :version))))))
+    (list test-name
+          :files test-files
+          :version test-version
+          :requires
+          (append
+           (list (list (car base-recipe) test-version))
+           test-require))))
 
-Return just the elisp files that aren't matching a test pattern."
-  (let* ((package-name
-          (file-name-sans-extension
-           (file-name-nondirectory package-dir)))
-         (files (directory-files package-dir t "^[.#].*"))
-         (elisp-files (directory-files package-dir nil "^[^.#].*\\.el$")))
-    (if (equal (length elisp-files) 1)
-        elisp-files
-        ;; Else it's more than one elisp file but is it one file
-        ;; and a test? Try and remove test files
-        (let ((diff (-difference
-                     (-difference
-                      elisp-files
-                      (elpakit/mematch "test.*\\.el$" elisp-files))
-                     (elpakit/mematch ".*test\\.el$" elisp-files))))
-          diff))))
-
-(defun elpakit/do (destination package-dir)
+(defun elpakit/do (destination package-dir &optional do-tests)
   "Put the package in PACKAGE-DIR in DESTINATION.
 
-Build the package if necessary.
+The PACKAGE-DIR specifies the package.  It will either have a
+recipe directory in it or we'll be able to infer a recipe from
+it.
 
-Return, a cons of the type (`single' or `tar') and a list, the
-information necessary to build the archive-contents file."
+If DO-TESTS is `t' also attempt to build and copy the test
+package for the PACKAGE-DIR.  The test package may be inferred or
+it may be detailed in a supplied recipe file.
+
+Returns a list of the packages constructed.  A package is a cons
+of the type (`single' or `tar') and a vector, the information
+necessary to build the archive-contents file.
+
+If DO-TESTS is `nil' then the list returned always has just one
+element which is the package cons.  If DO-TESTS is true though
+the list MAY contain the package cons AND an additional
+test-package cons."
   (assert (file-directory-p package-dir))
-  (if (elpakit/file-in-dir-p "recipes" package-dir)
-      ;; Find the list of files from the recipe
-      (elpakit/with-recipe destination package-dir)
-      ;; Else we don't have a recipe - can we infer one?
-      (let* ((package-name
-              (file-name-sans-extension
-              (file-name-nondirectory package-dir)))
-             (elisp-files (elpakit/package-elisp-files package-dir)))
-        ;; If we have just 1 elisp file it's easy - it's a single package
-        (if (equal (length elisp-files) 1)
-            (cons
-             'single
-             (elpakit/build-single
+  (let* ((recipe (elpakit/get-recipe package-dir))
+         (package (elpakit/build-recipe destination recipe))
+         (recipe-plist (cdr recipe)))
+    ;; Make the return list
+    (cons package
+          (when (and do-tests
+                     (plist-get recipe-plist :test))
+            (list
+             (elpakit/build-recipe
               destination
-              (concat
-               (file-name-as-directory package-dir)
-               (car elisp-files))))
-            ;; Else it's a multi-package and we can't do it yet
-            ;;
-            ;; FIXME - we could infer a lot about what to put in a
-            ;; package:
-            ;;
-            ;; ** multiple, non-test lisp files could just be packaged
-            ;; ** include any README and licence file
-            ;; ** include any dir file and info files?
-            (error
-             "elpakit - cannot infer package for %s - add a recipe description"
-             package-dir)))))
+              (elpakit/test-plist->recipe package-dir)))))))
 
 ;;;###autoload
 (defun elpakit-eval (package-list)
@@ -384,12 +461,12 @@ information necessary to build the archive-contents file."
                 type))))
 
 ;;;###autoload
-(defun elpakit (destination package-list)
+(defun elpakit (destination package-list &optional do-tests)
   "Make a package archive at DESTINATION from PACKAGE-LIST."
   (let* ((packages-list
           (loop for package in package-list
-             collect
-               (elpakit/do destination package)))
+             append
+               (elpakit/do destination package do-tests)))
          (archive-list (elpakit/packages-list->archive-list packages-list))
          (archive-dir (file-name-as-directory destination)))
     (unless (file-exists-p archive-dir)
@@ -400,6 +477,51 @@ information necessary to build the archive-contents file."
       (erase-buffer)
       (insert (format "%S" (cons 1 archive-list)))
       (save-buffer))))
+
+(defun elpakit/emacs-process (archive-dir install test)
+  "Start an Emacs test process with the ARCHIVE-DIR repository.
+
+Install the package INSTALL and then run batch tests on TEST.
+
+The current Emacs process' `package-archives' variable is used
+with the ARCHIVE-DIR being an additional repository called
+\"local\".
+
+The ARCHIVE-DIR was presumably built with elpakit, though it
+could have come from anywhere."
+  (let* ((elpa-dir (make-temp-file ".emacs.elpa" t))
+         (emacs-bin (concat invocation-directory invocation-name))
+         (args
+          `("-batch"
+            "-Q"
+            "--eval"
+            ,(format
+              (concat
+               "(progn"
+               "(setq package-archives (quote %S))"
+               "(setq package-user-dir %S)"
+               "(package-initialize)"
+               "(package-refresh-contents)"
+               "(package-install (quote %S))"
+               "(load-library \"%S\")"
+               "(ert-run-tests-batch \"%S.*\"))")
+              (acons "local" archive-dir package-archives)
+              elpa-dir ;; where packages will be installed to
+              install
+              install
+              test))))
+    (apply 'start-process
+           "elpakit"
+           "*elpakit*"
+           emacs-bin args)))
+
+;;;###autoload
+(defun elpakit-test (package-list install test)
+  "Run all the tests for the specified PACKAGE-LIST."
+  (let ((archive-dir (make-temp-file "elpakit-archive" t)))
+    ;; First build the elpakit with tests
+    (elpakit archive-dir package-list t)
+    (elpakit/emacs-process archive-dir install test)))
 
 (provide 'elpakit)
 
