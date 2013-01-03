@@ -136,6 +136,30 @@ through the presence of files matching the pattern {{{test.*.el}}} or
 
 Test packages are always named //package-name//{{{-test}}}.
 
+== Testing ==
+
+A useful feature of elpakit is being able to build the kit and then
+run tests defined for a package (note: only //one// of the packages in
+the kit right now).
+
+You can do that like this:
+
+
+{{{
+(elpakit-test
+ '("~/work/emacs-db"
+   "~/work/emacs-db-pg"
+   "~/work/pg"
+   "~/work/emacs-kv")
+ 'db-pg-tests
+ 'db-pg)
+}}}
+
+The output is stored in the buffer //*elpakit*//.
+
+We probably need an interactive form of this.
+
+
 == Notes on the differences with MELPA ==
 
 I hope to merge much of this with MELPA. The MELPA guys are cool, I
