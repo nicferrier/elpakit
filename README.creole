@@ -286,13 +286,11 @@ copy so tramp works fine.
 
 == TODO ==
 
-* add more intelligence to {{{elpakit/do}}} to allow it to construct a recipe for multi-file packages
-** multiple, non-test lisp files could just be packaged
-** include any README and licence file
-** include any dir file and info files?
-*** I've already forgotten how this works
-* add a constructor for recipe files?
-* add a mode for editing recipe files?
+* include any dir file and info files in multi-file packages
+* add a walk through constructor process for recipe files?
+* add a mode (other than lisp-mode) for editing recipe files?
+* add the URL to the package in {{{elpakit/make-pkg-lisp}}}
+** should go into {{{define-package}}}'s {{{extra-properties}}}
 * add upstream repository list to a recipe
 ** so that a package could specify where it's dependant repositorys can be found
 ** this is mainly so a package could be installed from a url and specify that depends come from marmalade (for example)

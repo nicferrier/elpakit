@@ -175,7 +175,7 @@ The list is returned sorted and with absolute files."
                     (file-name-as-directory dest-dir)
                     (format "%s-pkg.el" name)))
          (lisp
-          `(define-package
+          `(define-package ; add the URL to extra-properties
                ,name
                ,(aref pkg-info 3)
              ,(aref pkg-info 2)
