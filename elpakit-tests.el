@@ -1,4 +1,6 @@
-;; Test
+;;; Tests for elpakit
+
+(require 'ert)
 
 (ert-deftest elpakit/mematch ()
   (should
@@ -144,4 +146,4 @@
      (elpakit/do "/tmp/elpakittest" "~/work/elnode-auth")
      0 4))))
 
-;; End
+;;; elpakit-tests.el ends here
