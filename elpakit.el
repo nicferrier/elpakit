@@ -4,9 +4,10 @@
 
 ;; Author: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
+;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
-;; Version: 0.0.6
+;; Version: 0.0.7.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -106,7 +107,7 @@ Files mentioned in the recipe are all absolute file names."
     (if (equal (length non-test-elisp) 1)
         (let ((name (car (elpakit/file->package (car non-test-elisp) :name))))
           ;; Return the recipe with optional test section
-          (list*
+          (list* ;; FIXME replace this with dash's -cons*
            name :files non-test-elisp
            (when test-files
              (list :test
