@@ -7,7 +7,7 @@
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
-;; Version: 0.0.7.1
+;; Version: 0.0.7.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -331,6 +331,7 @@ RECIPE specifies the package in a plist s-expression form."
     ;; Return the info
     package-info))
 
+;;;###autoload
 (defun elpakit-make-multi (package-dir)
   "Make a multi-package.
 
