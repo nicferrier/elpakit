@@ -144,7 +144,6 @@ the kit right now).
 
 You can do that like this:
 
-
 {{{
 (elpakit-test
  '("~/work/emacs-db"
