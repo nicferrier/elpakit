@@ -7,7 +7,7 @@
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
-;; Version: 0.0.7.2
+;; Version: 0.0.8
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -508,7 +508,7 @@ could have come from anywhere."
                "(package-refresh-contents)"
                "(package-install (quote %S))"
                "(load-library \"%S\")"
-               "(ert-run-tests-batch \"%S.*\"))")
+               "(ert-run-tests-batch \"%s.*\"))")
               (acons "local" archive-dir package-archives)
               elpa-dir ;; where packages will be installed to
               install
