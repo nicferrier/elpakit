@@ -1,11 +1,11 @@
-A package archive builder.
+= A package and archive builder =
 
-This is for building file based package archives. This is useful
-for deploying small sets of under-development-packages in servers;
-for example elnode packages. 
+Elpakit is a collection of tools for building packages and archives of
+packages. This is useful for managing small sets of
+under-development-packages that may be related.
 
-It's also useful for describing the work of building multi-file
-packages and for expressing some testing details.
+It's also useful as a build tool for multi-file packages and for
+expressing some testing details.
 
 An example:
 
@@ -22,6 +22,43 @@ This should make a package archive in /tmp/shoesoffsaas which has the
 4 packages in it, it will //build// those packages first if they need
 to be built (building only really means something for tar packages).
 
+== Glossary ==
+
+A //package// is either a single EmacsLisp file with a special header
+or a collection of EmacsLisp and possibly other files (like an info
+file or HTML files) in a tarball. A single file EmacsLisp package is
+called a //single file package// and a tar package is called a
+//multi-file package//. Elpakit deals with either single or multi file
+packages and can //build// a multi-file package for you (a non-trivial
+process) from a collection of source files.
+
+A //package dir// is a directory in which the source files for a
+package are kept. Probably this is a checkout of a version control
+repository but need not be.
+
+A //recipe// is a file that tells Elpakit how to put together a
+package. It is found in a //package-dir//. For single file packages
+this is almost never necessary. For multi-file packages it is
+necessary. The recipe is necessary for multi-file packages because it
+contains information about the package that has no other home //and//
+because Elpakit cannot guess what files in your tree you actually want
+to be present in your resulting package.
+
+An //archive// is a place you can install packages from. Archives can
+either be {{{http}}} URLs or a local directory. Elpakit can make
+archives from collections of //package dirs//. To actually install
+from a particular archive you need to add the archive to the Emacs
+variable {{{package-archives}}}.
+
+An //elpakit// is a list of //package-dir// that are going to be built
+into an archive. Once the archive is built we can do more with it,
+such as running tests on the packages we've built (which will be clean
+and not tainted by any local evaluation you have done in your local
+Emacs).
+
+A //local emacs// is the Emacs you are writing code and running
+Elpakit in, as opposed to an Emacs instance you start to do testing or
+such.
 
 == Status ==
 
@@ -29,7 +66,7 @@ This is very early code and it's difficult to test a lot of it. It
 mostly works. You may find bugs. If you do please tell me.
 
 
-== Packaging ==
+== Packaging Details ==
 
 To use elpakit your development tree must conform to a particular
 standard.
@@ -156,7 +193,19 @@ You can do that like this:
 
 The output is stored in the buffer //*elpakit*//.
 
-We probably need an interactive form of this.
+Elpakit constructs a temporary archive for the kit and then builds the
+packages to it and then runs an Emacs instance with your local
+{{{package-archives}}} plus the temporary one and then installs the
+package you've specified and then runs the tests you specified with an
+ERT selector.
+
+=== Testing interactively ===
+
+{{{elpakit-test}}} can be run interactively. When used like that it
+uses the current directory as a guess about a //package dir//. This
+means you can only package and test one package right now. Any
+dependancies must be present in the repositories declared in your
+local {{{package-archives}}} variable.
 
 
 == Notes on the differences with MELPA ==
