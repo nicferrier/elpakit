@@ -385,33 +385,35 @@ Opens the directory the package has been built in."
 
 (defun elpakit/test-plist->recipe (package-dir)
   "Turn the :test plist from PACKAGE-DIR into a proper recipe."
-  (let* ((base-recipe (elpakit/get-recipe package-dir))
-         (base-plist (cdr base-recipe))
-         (test-plist (plist-get base-plist :test))
-         (test-files
-          (mapcar
-           (lambda (f)
-             (if (file-name-absolute-p f) f
-                 (elpakit/absolutize-file-name package-dir f)))
-           (plist-get test-plist :files)))
-         (test-name (intern
-                     (file-name-sans-extension
-                      (file-name-nondirectory (car test-files)))))
-         (test-require (plist-get test-plist :requires))
-         (test-version
-          (or (plist-get base-plist :version)
-              (destructuring-bind
-                    (&key elisp-files test-files non-test-elisp)
-                  (elpakit/infer-files package-dir)
+  (destructuring-bind
+        (&key elisp-files test-files non-test-elisp)
+      (elpakit/infer-files package-dir)
+    (let* ((base-recipe (elpakit/get-recipe package-dir))
+           (base-plist (cdr base-recipe))
+           (test-plist (plist-get base-plist :test))
+           (test-files
+            (mapcar
+             (lambda (f)
+               (if (file-name-absolute-p f) f
+                   (elpakit/absolutize-file-name package-dir f)))
+             (or
+              (plist-get test-plist :files)
+              test-files)))
+           (test-name (intern
+                       (file-name-sans-extension
+                        (file-name-nondirectory (car test-files)))))
+           (test-require (plist-get test-plist :requires))
+           (test-version
+            (or (plist-get base-plist :version)
                 (car (elpakit/file->package
-                      (car non-test-elisp) :version))))))
-    (list test-name
-          :files test-files
-          :version test-version
-          :requires
-          (append
-           (list (list (car base-recipe) test-version))
-           test-require))))
+                      (car non-test-elisp) :version)))))
+      (list test-name
+            :files test-files
+            :version test-version
+            :requires
+            (append
+             (list (list (car base-recipe) test-version))
+             test-require)))))
 
 (defun elpakit/do (destination package-dir &optional do-tests)
   "Put the package in PACKAGE-DIR in DESTINATION.
@@ -517,15 +519,29 @@ could have come from anywhere."
            "*elpakit*"
            emacs-bin args)))
 
+(defvar elpakit/test-ert-selector-history nil
+  "History variable for `elpakit-test'.")
+
 ;;;###autoload
 (defun elpakit-test (package-list install test)
-  "Run all the tests for the specified PACKAGE-LIST."
+  (interactive
+   (let ((test-recipe (elpakit/test-plist->recipe default-directory)))
+     (assert
+      (listp test-recipe)
+      "there's no package in the current dir?")
+     ;; deliver the interctive args
+     (list (list default-directory)
+           (car test-recipe)
+           (read-from-minibuffer
+            "ERT selector: " nil nil nil elpakit/test-ert-selector-history))))
+  "Run tests on an install of the specified PACKAGE-LIST."
   (let ((archive-dir (make-temp-file "elpakit-archive" t)))
     ;; First build the elpakit with tests
     (elpakit archive-dir package-list t)
-    (elpakit/emacs-process archive-dir install test)))
+    (elpakit/emacs-process archive-dir install test)
+    (when (called-interactively-p)
+      (switch-to-buffer-other-window "*elpakit*"))))
 
 (provide 'elpakit)
-
 
 ;;; elpakit.el ends here
