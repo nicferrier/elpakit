@@ -293,6 +293,9 @@ a directory to Emacs. That means you can use TRAMP:
      "~/work/shoes-off"))
 }}}
 
+This is useful for deploying packages to remote locations, for example
+"live" in an [[http://elnode.org|elnode]] app.
+
 === Defining kits to be reusable ===
 
 Just collecting the list of package directories into a list means you
