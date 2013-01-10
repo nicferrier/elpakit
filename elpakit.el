@@ -529,6 +529,7 @@ could have come from anywhere."
      (assert
       (listp test-recipe)
       "there's no package in the current dir?")
+     (with-current-buffer (get-buffer-create "*elpakit*") (erase-buffer))
      ;; deliver the interctive args
      (list (list default-directory)
            (car test-recipe)
