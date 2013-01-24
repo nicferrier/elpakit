@@ -549,14 +549,14 @@ presuming that you're trying to start it from the same user."
                 "(package-initialize)"
                 "(package-refresh-contents)"
                 "(package-install (quote %S))"
-                "(require '%S)"
-                "(ert-run-tests-batch \"%s.*\"))")
+                "(require '%S)%s)")
                (acons "local" archive-dir package-archives)
                elpa-dir ;; where packages will be installed to
                install
                install
-               (or test "")
-               )))
+               (if test
+                   (format "(ert-run-tests-batch \"%s.*\")" test)
+                   ""))))
     (cons
      (apply 'start-process unique "*elpakit-daemon*" emacs-bin args)
      unique)))
