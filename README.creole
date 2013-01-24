@@ -208,6 +208,35 @@ dependancies must be present in the repositories declared in your
 local {{{package-archives}}} variable.
 
 
+=== Testing with a daemon ===
+
+You can also start an elpakit in a daemonized Emacs and optionally run
+tests.
+
+{{{
+(elpakit-start-server some-elpakit to-install)
+}}}
+
+will start a server, open the //*elpakit-daemon*// buffer and setup
+the //to-install// there.
+
+To run tests automatically, add the //test// argument, for example:
+
+{{{
+(elpakit-start-server elnode-elpakit 'elnode-tests "elnode")
+}}}
+
+will install the //elnode-tests// package and then run tests for
+//elnode.*// in a server Emacs.
+
+You can kill that server Emacs from the command line or from the
+//*elpakit-daemon*// buffer like this:
+
+{{{
+M-x elpakit-stop-server
+}}}
+
+
 == Notes on the differences with MELPA ==
 
 I hope to merge much of this with MELPA. The MELPA guys are cool, I
@@ -334,6 +363,8 @@ repository you can still do that, just use tramp for the destination:
 
 Presuming {{{my-elpakit}}} is an elpakit list. Elpakit uses a straight
 copy so tramp works fine.
+
+=== Starting a server ===
 
 == TODO ==
 
