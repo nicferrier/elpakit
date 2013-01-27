@@ -400,6 +400,44 @@ files in to the package location, then require the main thing:
 Note the clever hack to find the package location based on an autoload
 specified function.
 
+Here's a more clever version of that wrapped up in an interactive,
+defun, very useful startup routine:
+
+{{{
+(defvar talkapp-elpakit-server nil)
+
+;; Start the talkapp in an elpakit server
+(defun talkapp-do-elpakit-server ()
+  (interactive)
+  (condition-case err
+      (progn
+        (server-eval-at (cdr talkapp-elpakit-server) '1)
+        (error
+         "talkapp-elpakit-server already running %s"
+         (cdr talkapp-elpakit-server)))
+    (error (if (string-match "^No such server" (cadr err))
+               (setq talkapp-elpakit-server
+                     (elpakit-start-server
+                      shoes-off-train
+                      'talkapp
+                      :extra-lisp
+                      ;; Copy in the db files from the working dir...
+                      '(progn
+                        (shell-command
+                         (format
+                          "cp -r ~/work/teamchat/talkapp/*db*.elc %s"
+                          (file-name-directory
+                           (find-lisp-object-file-name
+                            'talkapp-start
+                            (symbol-function 'talkapp-start)))))
+                        (require (quote talkapp)))))
+               ;; Else rethrow
+               (signal (car err) (cdr err))))))
+}}}
+
+It only allows one at a time atm but that's still better than trying
+to do everything inside a single emacs.
+
 == TODO ==
 
 * include any dir file and info files in multi-file packages
