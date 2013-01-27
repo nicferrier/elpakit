@@ -366,6 +366,40 @@ copy so tramp works fine.
 
 === Starting a server ===
 
+Starting a server and running some tests in it:
+
+{{{
+(setq nic-server
+   (elpakit-start-server 
+        shoes-off-train 'talkapp :test t))
+}}}
+
+Server's can be started with extra lisp to initialize them, in this
+case they do not auto-require the install target. 
+
+So here's a quick snippet to start a server with an archive, copy some
+files in to the package location, then require the main thing:
+
+{{{
+(setq nic-server
+      (elpakit-start-server
+       shoes-off-train
+       'talkapp
+       :extra-lisp
+       '(progn
+         (shell-command
+          (format
+           "cp -r ~/work/teamchat/talkapp/*db*.elc %s"
+           (file-name-directory
+            (find-lisp-object-file-name
+             'talkapp-start
+             (symbol-function 'talkapp-start)))))
+         (require (quote talkapp)))))
+}}}
+
+Note the clever hack to find the package location based on an autoload
+specified function.
+
 == TODO ==
 
 * include any dir file and info files in multi-file packages
