@@ -466,21 +466,48 @@ test-package cons."
 
 ;;;###autoload
 (defun elpakit (destination package-list &optional do-tests)
-  "Make a package archive at DESTINATION from PACKAGE-LIST."
-  (let* ((packages-list
-          (loop for package in package-list
-             append
-               (elpakit/do destination package do-tests)))
-         (archive-list (elpakit/packages-list->archive-list packages-list))
-         (archive-dir (file-name-as-directory destination)))
-    (unless (file-exists-p archive-dir)
-      (make-directory archive-dir t))
-    (with-current-buffer
-        (find-file-noselect
-         (concat archive-dir "archive-contents"))
-      (erase-buffer)
-      (insert (format "%S" (cons 1 archive-list)))
-      (save-buffer))))
+  "Make a package archive at DESTINATION from PACKAGE-LIST.
+
+PACKAGE-LIST is either a list of local directories to package or
+a list of two items beginning with the symbol `:archive' and
+specifying an existing directory archive in `packages-archives'.
+
+If PACKAGE-LIST is not an `:archive' reference then the package
+directories specified are turned into packages in the
+DESTINATION.
+
+If PACKAGE-LIST is an `:archive' reference then the specified
+archive is copied to DESTINATION.
+
+For example, if `pacckage-archives' is:
+
+ '((\"local\" . \"/tmp/my-elpakit\")(\"gnu\" . \"http://gnu.org/elpa/\"))
+
+and `elpakit' is called like this:
+
+ (elpakit \"/tmp/new-elpakit\" (list :archive \"local\"))
+
+then /tmp/my-elpakit will be copied to /tmp/new-elpakit."
+  (if (eq :archive (car package-list))
+      (copy-directory
+       (aget package-archives (cadr package-list))
+       destination
+       nil t t)
+      ;; Else do the package build
+      (let* ((packages-list
+              (loop for package in package-list
+                 append
+                   (elpakit/do destination package do-tests)))
+             (archive-list (elpakit/packages-list->archive-list packages-list))
+             (archive-dir (file-name-as-directory destination)))
+        (unless (file-exists-p archive-dir)
+          (make-directory archive-dir t))
+        (with-current-buffer
+            (find-file-noselect
+             (concat archive-dir "archive-contents"))
+          (erase-buffer)
+          (insert (format "%S" (cons 1 archive-list)))
+          (save-buffer)))))
 
 (defun elpakit/emacs-process (archive-dir install test)
   "Start an Emacs test process with the ARCHIVE-DIR repository.
