@@ -546,7 +546,7 @@ could have come from anywhere."
            "*elpakit*"
            emacs-bin args)))
 
-(defun elpakit/emacs-server (archive-dir install &optional extra-lisp)
+(defun elpakit/emacs-server (archive-dir install &optional extra-lisp pre-lisp)
   "Start an Emacs server process with the ARCHIVE-DIR repository.
 
 The server started is a daemon.  The process that starts the
@@ -582,12 +582,14 @@ presuming that you're trying to start it from the same user."
       (insert (format
                (concat
                 "(progn"
+                "%s"
                 "(setq package-archives (quote %S))"
                 "(setq package-user-dir %S)"
                 "(package-initialize)"
                 "(package-refresh-contents)"
                 "(package-install (quote %S))"
                 "%s)")
+               (if pre-lisp (format "%S" pre-lisp) "")
                (acons "local" archive-dir package-archives)
                elpa-dir ;; where packages will be installed to
                install
@@ -600,7 +602,9 @@ presuming that you're trying to start it from the same user."
      (apply 'start-process unique "*elpakit-daemon*" emacs-bin args)
      unique)))
 
-(defun* elpakit-start-server (package-list install &key test extra-lisp)
+(defun* elpakit-start-server (package-list
+                              install
+                              &key test pre-lisp extra-lisp)
   "Start a server with the PACKAGE-LIST.
 
 If TEST is `t' then we run tests in the daemon.
@@ -609,7 +613,11 @@ If EXTRA-LISP is a list then that is passed into the daemon to be
 executed as extra initialization.  If EXTRA-LISP is specified
 then automatic requiring of the INSTALL is not performed.  If
 EXTRA-LISP and TEST is specified then tests are done *after*
-EXTRA-LISP.  EXTRA-LISP must do the require in that case."
+EXTRA-LISP.  EXTRA-LISP must do the require in that case.
+
+If PRE-LISP is a list then it is passed into the daemon as Lisp
+to be executed before initialization.  This is where any
+customization that you need should go."
   (let ((archive-dir (make-temp-file "elpakit-archive" t)))
     ;; First build the elpakit with tests
     (elpakit archive-dir package-list t)
@@ -624,7 +632,7 @@ EXTRA-LISP.  EXTRA-LISP must do the require in that case."
                  `(require (quote ,install))
                  test-stuff)))
            (daemon-value
-            (elpakit/emacs-server archive-dir install extra)))
+            (elpakit/emacs-server archive-dir install extra pre-lisp)))
       (with-current-buffer (get-buffer-create "*elpakit-daemon*")
         (make-variable-buffer-local 'elpakit-unique-handle)
         (setq elpakit-unique-handle (cdr daemon-value))
@@ -644,6 +652,9 @@ EXTRA-LISP.  EXTRA-LISP must do the require in that case."
 
 ;;;###autoload
 (defun elpakit-test (package-list install test)
+  "Run tests on package INSTALL of the specified PACKAGE-LIST.
+
+TEST is an ERT test selector."
   (interactive
    (let ((test-recipe (elpakit/test-plist->recipe default-directory)))
      (assert
@@ -655,7 +666,6 @@ EXTRA-LISP.  EXTRA-LISP must do the require in that case."
            (car test-recipe)
            (read-from-minibuffer
             "ERT selector: " nil nil nil elpakit/test-ert-selector-history))))
-  "Run tests on an install of the specified PACKAGE-LIST."
   (let ((archive-dir (make-temp-file "elpakit-archive" t)))
     ;; First build the elpakit with tests
     (elpakit archive-dir package-list t)
