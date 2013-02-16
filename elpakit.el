@@ -461,7 +461,7 @@ test-package cons."
         (intern (elt package 0)) ; name
         (vector (version-to-list (elt package 3)) ; version list
                 (elt package 1) ; requirements
-                (elt package 4) ; doc string
+                (elt package 2) ; doc string
                 type))))
 
 ;;;###autoload
