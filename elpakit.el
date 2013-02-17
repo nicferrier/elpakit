@@ -654,7 +654,7 @@ could have come from anywhere."
               install
               test)))
          (name (generate-new-buffer-name
-                (concat "elpaki-" (symbol-name install))))
+                (concat "elpakit-" (symbol-name install))))
          (proc (apply 'start-process name (format "*%s*" name) emacs-bin args)))
     (elpakit/process-add name :batch proc)
     (with-current-buffer (process-buffer proc)
