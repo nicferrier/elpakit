@@ -611,7 +611,10 @@ the second item is the process type either `:daemon' or
 
 ;;;###autoload
 (defun elpakit-list-processes ()
-  "List running elpakit processes."
+  "List running elpakit processes.
+
+Uses `elpakit-process-list-mode' to display the currently running
+elpakit processes from batch tests and daemons."
   (interactive)
   (with-current-buffer (get-buffer-create "*elpakit-processes*")
     (elpakit-process-list-mode)
