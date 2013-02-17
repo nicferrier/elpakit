@@ -48,7 +48,7 @@
 (require 'dash)
 (require 'cl)
 (require 'anaphora)
-(require 'kv)
+(require 'tabulated-list)
 
 (defun elpakit/file-in-dir-p (filename dir)
   "Is FILENAME in DIR?"
