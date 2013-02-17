@@ -237,6 +237,18 @@ M-x elpakit-stop-server
 }}}
 
 
+=== Managing test processes ===
+
+Elpakit includes a management tool for processes it starts. Use:
+
+{{{
+M-x elpakit-list-processes
+}}}
+
+to make a process list of elpakit started processes. You can use this
+to show the log of an elpakit process (key {{{L}}}) or to kill a
+running elpakit process (key {{{K}}}) even if it's a daemon.
+
 == Notes on the differences with MELPA ==
 
 I hope to merge much of this with MELPA. The MELPA guys are cool, I
