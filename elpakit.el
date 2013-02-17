@@ -609,7 +609,9 @@ the second item is the process type either `:daemon' or
       'elpakit-process-show-buffer)
     (tabulated-list-init-header))
 
+;;;###autoload
 (defun elpakit-list-processes ()
+  "List running elpakit processes."
   (interactive)
   (with-current-buffer (get-buffer-create "*elpakit-processes*")
     (elpakit-process-list-mode)
