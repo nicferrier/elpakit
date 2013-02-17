@@ -48,6 +48,7 @@
 (require 'dash)
 (require 'cl)
 (require 'anaphora)
+(require 'kv)
 
 (defun elpakit/file-in-dir-p (filename dir)
   "Is FILENAME in DIR?"
@@ -509,6 +510,112 @@ then /tmp/my-elpakit will be copied to /tmp/new-elpakit."
           (insert (format "%S" (cons 1 archive-list)))
           (save-buffer)))))
 
+(defconst elpakit/processes (make-hash-table :test 'equal)
+  "List of elpakit processes, either emphemeral or daemons.
+
+Each process should be a list where the first item is the name,
+the second item is the process type either `:daemon' or
+`:batch'.  Other items may be present.")
+
+(defun elpakit/process-add (name type process &rest rest)
+  "Add a process to the central list."
+  (puthash name (append (list name type process) rest) elpakit/processes))
+
+(defun elpakit/process-list ()
+  "List all the processes."
+  (let (res)
+    (maphash
+     (lambda (k v)
+       (setq res (append (list v) res)))
+     elpakit/processes)
+    res))
+
+(defun elpakit/process-del (name)
+  "Remove a process from the central list."
+  (remhash name elpakit/processes))
+
+(defun elpakit/process-list-entries ()
+  "List of processes in `tabulated-list-mode' format."
+  (loop for (proc-name proc-type &rest rest) in (elpakit/process-list)
+     collect
+       (list proc-name
+             (vector proc-name
+                     (case proc-type
+                       (:daemon "daemon")
+                       (:batch "batch"))
+                     (if rest (format "%S" rest) "")))))
+
+(defun elpakit-process-kill (process-id &optional interactive-y)
+  "Kill the specified proc with PROCESS-ID."
+  (interactive
+   (list
+    (buffer-substring-no-properties
+     (line-beginning-position)
+     (save-excursion
+       (goto-char (line-beginning-position))
+       (- (re-search-forward " " nil t) 1))) t))
+  (destructuring-bind (name type process &rest other)
+      (gethash process-id elpakit/processes)
+    ;; Check that we're interactive and the user really wants it
+    ;; ... or we're not interactive.
+    (when (or
+           (and
+            interactive-y
+            (y-or-n-p (format "elpakit: delete process %s?" name)))
+           (not interactive-y))
+      (when (process-live-p process)
+        (delete-process process))
+      (when (eq type :daemon)
+        (server-eval-at
+         name
+         '(kill-emacs)))
+      (elpakit/process-del name)
+      ;; Update the list if necessary
+      (when (equal (buffer-name (current-buffer))
+                   "*elpakit-processes*")
+        (tabulated-list-print)))))
+
+(defun elpakit-process-show-buffer (process-id)
+  "Show the buffer for the proc with PROCESS-ID."
+  (interactive
+   (list
+    (buffer-substring-no-properties
+     (line-beginning-position)
+     (save-excursion
+       (goto-char (line-beginning-position))
+       (- (re-search-forward " " nil t) 1)))))
+  (destructuring-bind (name type process &rest other)
+      (gethash process-id elpakit/processes)
+    (let ((buf (process-buffer process)))
+      (if (or (not (bufferp buf))
+              (not (buffer-live-p buf)))
+          (message "elpakit process %s has no buffer?" process-id)
+          ;; Else switch to the buffer
+          (switch-to-buffer buf)))))
+
+(define-derived-mode
+    elpakit-process-list-mode tabulated-list-mode "Elpakit process list"
+    "Major mode for listing Elpakit processes."
+    (setq tabulated-list-entries 'elpakit/process-list-entries)
+    (setq tabulated-list-format
+          [("Process Name" 30 nil)
+           ("Batch or Daemon" 20 nil)
+           ("Args" 30 nil)])
+    (define-key
+        elpakit-process-list-mode-map (kbd "K")
+      'elpakit-process-kill)
+    (define-key
+        elpakit-process-list-mode-map (kbd "L")
+      'elpakit-process-show-buffer)
+    (tabulated-list-init-header))
+
+(defun elpakit-list-processes ()
+  (interactive)
+  (with-current-buffer (get-buffer-create "*elpakit-processes*")
+    (elpakit-process-list-mode)
+    (tabulated-list-print)
+    (switch-to-buffer (current-buffer))))
+
 (defun elpakit/emacs-process (archive-dir install test)
   "Start an Emacs test process with the ARCHIVE-DIR repository.
 
@@ -540,11 +647,14 @@ could have come from anywhere."
               elpa-dir ;; where packages will be installed to
               install
               install
-              test))))
-    (apply 'start-process
-           "elpakit"
-           "*elpakit*"
-           emacs-bin args)))
+              test)))
+         (name (generate-new-buffer-name
+                (concat "elpaki-" (symbol-name install))))
+         (proc (apply 'start-process name (format "*%s*" name) emacs-bin args)))
+    (elpakit/process-add name :batch proc)
+    (with-current-buffer (process-buffer proc)
+      (compilation-mode))
+    proc))
 
 (defun elpakit/emacs-server (archive-dir install &optional extra-lisp pre-lisp)
   "Start an Emacs server process with the ARCHIVE-DIR repository.
@@ -598,10 +708,15 @@ presuming that you're trying to start it from the same user."
                     (lambda (a) (format "%S" a))
                     extra-lisp "\n")
                    ""))))
-    (cons
-     (apply 'start-process unique "*elpakit-daemon*" emacs-bin args)
-     unique)))
+    (let ((proc (apply 'start-process
+                       unique (format "*%s*" unique)
+                       emacs-bin args)))
+      (with-current-buffer (process-buffer proc)
+        (compilation-mode))
+      (elpakit/process-add unique :daemon proc)
+      (cons proc unique))))
 
+;;;###autoload
 (defun* elpakit-start-server (package-list
                               install
                               &key test pre-lisp extra-lisp)
@@ -617,7 +732,10 @@ EXTRA-LISP.  EXTRA-LISP must do the require in that case.
 
 If PRE-LISP is a list then it is passed into the daemon as Lisp
 to be executed before initialization.  This is where any
-customization that you need should go."
+customization that you need should go.
+
+You can manage running servers with the `elpakit-list-processes'
+command."
   (let ((archive-dir (make-temp-file "elpakit-archive" t)))
     ;; First build the elpakit with tests
     (elpakit archive-dir package-list t)
@@ -638,15 +756,6 @@ customization that you need should go."
         (setq elpakit-unique-handle (cdr daemon-value))
         daemon-value))))
 
-(defun elpakit-stop-server ()
-  "Stop the server in the current *elpakit-daemon* buffer."
-  (interactive)
-  (assert (equal "*elpakit-daemon*" (buffer-name)))
-  (assert elpakit-unique-handle)
-  (server-eval-at
-   elpakit-unique-handle
-   '(kill-emacs)))
-
 (defvar elpakit/test-ert-selector-history nil
   "History variable for `elpakit-test'.")
 
@@ -654,7 +763,10 @@ customization that you need should go."
 (defun elpakit-test (package-list install test)
   "Run tests on package INSTALL of the specified PACKAGE-LIST.
 
-TEST is an ERT test selector."
+TEST is an ERT test selector.
+
+You can manage running processes with the `elpakit-list-processes'
+command."
   (interactive
    (let ((test-recipe (elpakit/test-plist->recipe default-directory)))
      (assert
