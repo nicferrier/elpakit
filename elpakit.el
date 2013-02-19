@@ -790,6 +790,72 @@ command."
     (when (called-interactively-p)
       (switch-to-buffer-other-window "*elpakit*"))))
 
+
+;;; Other tools on top of elpakit
+
+(defun elpakit/files-to-elisp (list-of-files)
+  (-filter
+   (lambda (e) (string-match-p ".*\\.el$" e)) list-of-files))
+
+(defun elpakit-multi-occur (buffer thing)
+  "Multi-occur the current symbol using the current Elpakit.
+
+All lisp files in the current elpakit are considered.
+
+`elpakit-isearch-hook-jack-in' can be used to connect this up to
+`isearch'.  Alternately or additionally bind it to another key in
+`emacs-lisp-mode'."
+  (interactive
+   (list
+    (current-buffer)
+    (thing-at-point 'symbol)))
+  (let ((recipe-dir
+         (file-name-as-directory
+          (car
+           (directory-files
+            (file-name-directory
+             (buffer-file-name buffer))
+            t "recipes")))))
+    (if (file-exists-p recipe-dir)
+        (let* ((recipe-list
+                (with-current-buffer
+                    (find-file-noselect
+                     (car (directory-files recipe-dir t "^[^.].*[^~]$")))
+                  (save-excursion
+                    (goto-char (point-min))
+                    (read
+                     (current-buffer)))))
+               (files (plist-get (cdr recipe-list) :files))
+               (elisp (elpakit/files-to-elisp files))
+               (elisp-buffers
+                (loop for filename in elisp
+                   collect (find-file-noselect filename))))
+          (multi-occur elisp-buffers thing)))))
+
+(defvar elpakit/isearch-keymap nil
+  "The keymap containing extra things we enable during isearch.")
+
+(defun elpakit/isearch-hook-jack-in ()
+  "To be called by the isearch hook to connect our keymap."
+  (unless elpakit/isearch-keymap
+    (setq elpakit/isearch-keymap (make-sparse-keymap))
+    (set-keymap-parent elpakit/isearch-keymap isearch-mode-map)
+    (define-key elpakit/isearch-keymap (kbd "M-o")
+      'elpakit-multi-occur)
+  (setq overriding-terminal-local-map elpakit/isearch-keymap)))
+
+(defun elpakit-isearch-hook-jack-in ()
+  "Jack in Elpakit to isearch. Call from `elisp-mode-hook'.
+
+Adds `elpakit-multi-occur' to `isearch' with `M-o'.
+
+Use something like:
+
+ (add-hook 'emacs-lisp-mode-hook 'elpakit-isearch-hook-jack-in)
+
+in your configuration file to make it happen."
+  (add-hook 'isearch-mode-hook 'elpakit/isearch-hook-jack-in t t))
+
 (provide 'elpakit)
 
 ;;; elpakit.el ends here
