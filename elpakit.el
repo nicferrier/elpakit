@@ -7,7 +7,7 @@
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
-;; Version: 0.0.12
+;; Version: 0.0.14
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -844,6 +844,7 @@ All lisp files in the current elpakit are considered.
       'elpakit-multi-occur)
   (setq overriding-terminal-local-map elpakit/isearch-keymap)))
 
+;;;###autoload
 (defun elpakit-isearch-hook-jack-in ()
   "Jack in Elpakit to isearch. Call from `elisp-mode-hook'.
 
