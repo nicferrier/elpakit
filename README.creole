@@ -249,6 +249,27 @@ to make a process list of elpakit started processes. You can use this
 to show the log of an elpakit process (key {{{L}}}) or to kill a
 running elpakit process (key {{{K}}}) even if it's a daemon.
 
+== Refactoring Support ==
+
+Elpakit includes some support for refactoring. When you are dealing
+with projects with lots of files (which Elpakit makes quite easy) it's
+common to need to refactor.
+
+Elpakit includes {{{elpakit-multi-occur}}} which can show you every
+reference to a symbol within your Elpakit project.
+
+{{{elpakit-isearch-hook-jack-in}}} can be added to
+{{{emacs-lisp-mode-hook}}} to connect {{{elpakit-multi-occur}}} to
+isearch.
+
+It might also be advisable to connect {{{elpakit-multi-occur}}} to a
+keybinding in the normal {{{emacs-lisp-mode}}}. This is left up to you
+but I suggest:
+
+{{{
+(define-key emacs-lisp-mode-map (kbd "M-o") 'elpakit-multi-occur)
+}}}
+
 == Notes on the differences with MELPA ==
 
 I hope to merge much of this with MELPA. The MELPA guys are cool, I
