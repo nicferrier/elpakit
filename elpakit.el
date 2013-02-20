@@ -545,6 +545,13 @@ the second item is the process type either `:daemon' or
                        (:batch "batch"))
                      (if rest (format "%S" rest) "")))))
 
+(defun elpakit/eval-at-server (name form)
+  "Evaluate FORM at server NAME for side effects only."
+  (with-temp-buffer
+    (print form (current-buffer))
+    (call-process-shell-command
+     (format "emacsclient -s %s --eval '%s'" name (buffer-string)) nil 0)))
+
 (defun elpakit-process-kill (process-id &optional interactive-y)
   "Kill the specified proc with PROCESS-ID."
   (interactive
@@ -566,7 +573,7 @@ the second item is the process type either `:daemon' or
       (when (process-live-p process)
         (delete-process process))
       (when (eq type :daemon)
-        (server-eval-at
+        (elpakit/eval-at-server
          name
          '(kill-emacs)))
       (elpakit/process-del name)
