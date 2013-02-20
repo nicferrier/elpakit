@@ -545,6 +545,13 @@ the second item is the process type either `:daemon' or
                        (:batch "batch"))
                      (if rest (format "%S" rest) "")))))
 
+(defun elpakit/eval-at-server (name form)
+  "Evaluate FORM at server NAME for side effects only."
+  (with-temp-buffer
+    (print form (current-buffer))
+    (call-process-shell-command
+     (format "emacsclient -s %s --eval '%s'" name (buffer-string)) nil 0)))
+
 (defun elpakit-process-kill (process-id &optional interactive-y)
   "Kill the specified proc with PROCESS-ID."
   (interactive
@@ -566,7 +573,7 @@ the second item is the process type either `:daemon' or
       (when (process-live-p process)
         (delete-process process))
       (when (eq type :daemon)
-        (server-eval-at
+        (elpakit/eval-at-server
          name
          '(kill-emacs)))
       (elpakit/process-del name)
@@ -621,6 +628,11 @@ elpakit processes from batch tests and daemons."
     (tabulated-list-print)
     (switch-to-buffer (current-buffer))))
 
+(defun elpakit/sentinel (process event)
+  (if (or (string-equal event "finished\n")
+          (string-equal event "exited abnormally with code exitcode\n"))
+      (elpakit/process-del (process-name process))))
+
 (defun elpakit/emacs-process (archive-dir install test)
   "Start an Emacs test process with the ARCHIVE-DIR repository.
 
@@ -657,6 +669,7 @@ could have come from anywhere."
                 (concat "elpakit-" (symbol-name install))))
          (proc (apply 'start-process name (format "*%s*" name) emacs-bin args)))
     (elpakit/process-add name :batch proc)
+    (set-process-sentinel proc 'elpakit/sentinel)
     (with-current-buffer (process-buffer proc)
       (compilation-mode))
     proc))
