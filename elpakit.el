@@ -621,6 +621,11 @@ elpakit processes from batch tests and daemons."
     (tabulated-list-print)
     (switch-to-buffer (current-buffer))))
 
+(defun elpakit/sentinel (process event)
+  (if (or (string-equal event "finished\n")
+          (string-equal event "exited abnormally with code exitcode\n"))
+      (elpakit/process-del (process-name process))))
+
 (defun elpakit/emacs-process (archive-dir install test)
   "Start an Emacs test process with the ARCHIVE-DIR repository.
 
@@ -657,6 +662,7 @@ could have come from anywhere."
                 (concat "elpakit-" (symbol-name install))))
          (proc (apply 'start-process name (format "*%s*" name) emacs-bin args)))
     (elpakit/process-add name :batch proc)
+    (set-process-sentinel proc 'elpakit/sentinel)
     (with-current-buffer (process-buffer proc)
       (compilation-mode))
     proc))
