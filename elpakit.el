@@ -49,6 +49,7 @@
 (require 'cl)
 (require 'anaphora)
 (require 'tabulated-list)
+(require 'server)
 
 (defun elpakit/file-in-dir-p (filename dir)
   "Is FILENAME in DIR?"
@@ -547,10 +548,12 @@ the second item is the process type either `:daemon' or
 
 (defun elpakit/eval-at-server (name form)
   "Evaluate FORM at server NAME for side effects only."
-  (with-temp-buffer
-    (print form (current-buffer))
-    (call-process-shell-command
-     (format "emacsclient -s %s --eval '%s'" name (buffer-string)) nil 0)))
+  (if (functionp 'server-eval-at)
+      (server-eval-at name form)
+      (with-temp-buffer
+        (print form (current-buffer))
+        (call-process-shell-command
+         (format "emacsclient -s %s --eval '%s'" name (buffer-string)) nil 0))))
 
 (defun elpakit-process-kill (process-id &optional interactive-y)
   "Kill the specified proc with PROCESS-ID."
