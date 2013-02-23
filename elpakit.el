@@ -573,6 +573,10 @@ the second item is the process type either `:daemon' or
             interactive-y
             (y-or-n-p (format "elpakit: delete process %s?" name)))
            (not interactive-y))
+      ;; First kill the buffer
+      (let ((buf (process-buffer process)))
+        (when (bufferp buf)
+          (kill-buffer buf)))
       (when (process-live-p process)
         (delete-process process))
       (when (eq type :daemon)
