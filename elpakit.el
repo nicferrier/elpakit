@@ -575,15 +575,24 @@ the second item is the process type either `:daemon' or
                    "*elpakit-processes*")
         (tabulated-list-print)))))
 
+(defun elpakit/process-list-process-id ()
+  "Get the process-id from the process-list buffer."
+  (buffer-substring-no-properties
+   (line-beginning-position)
+   (save-excursion
+     (goto-char (line-beginning-position))
+     (- (re-search-forward " " nil t) 1))))
+
+(defun elpakit-process-open-emacsd (process-id)
+  "Open the .emacs.d directory for the specified PROCESS-ID."
+  (interactive (list (elpakit/process-list-process-id)))
+  (destructuring-bind (name type process &rest other)
+      (gethash process-id elpakit/processes)
+    (find-file-other-window (format "/tmp/%s.emacsd" name))))
+
 (defun elpakit-process-show-buffer (process-id)
   "Show the buffer for the proc with PROCESS-ID."
-  (interactive
-   (list
-    (buffer-substring-no-properties
-     (line-beginning-position)
-     (save-excursion
-       (goto-char (line-beginning-position))
-       (- (re-search-forward " " nil t) 1)))))
+  (interactive (list (elpakit/process-list-process-id)))
   (destructuring-bind (name type process &rest other)
       (gethash process-id elpakit/processes)
     (let ((buf (process-buffer process)))
