@@ -630,6 +630,8 @@ elpakit processes from batch tests and daemons."
     (tabulated-list-print)
     (switch-to-buffer (current-buffer))))
 
+(defalias 'list-elpakit-processes 'elpakit-list-processes)
+
 (defun elpakit/emacs-process (archive-dir install test)
   "Start an Emacs test process with the ARCHIVE-DIR repository.
 
