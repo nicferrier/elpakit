@@ -580,10 +580,18 @@ the second item is the process type either `:daemon' or
       (when (process-live-p process)
         (delete-process process))
       (when (eq type :daemon)
-        (elpakit/eval-at-server
-         name
-         '(kill-emacs)))
-      (elpakit/process-del name)
+        (condition-case err
+            (elpakit/eval-at-server
+             name
+             '(kill-emacs))
+          ((file-error error)
+           (if (not
+                (string-match-p "^\\(No such server\\|Make client process\\)"
+                                (cadr err)))
+               ;; Rethrow if anything else
+               (signal (car err) (cdr err)))))
+        ;; Now safely delete the process from elpakit's list
+        (elpakit/process-del name))
       ;; Update the list if necessary
       (when (equal (buffer-name (current-buffer))
                    "*elpakit-processes*")
