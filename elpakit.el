@@ -597,6 +597,13 @@ the second item is the process type either `:daemon' or
       (gethash process-id elpakit/processes)
     (find-file-other-window (format "/tmp/%s.emacsd" name))))
 
+(defun elpakit-process-open-emacs-init (process-id)
+  "Open the init file for the specified PROCESS-ID."
+  (interactive (list (elpakit/process-list-process-id)))
+  (destructuring-bind (name type process &rest other)
+      (gethash process-id elpakit/processes)
+    (find-file-other-window (format "/tmp/%s.emacs-init.el" name))))
+
 (defun elpakit-process-show-buffer (process-id)
   "Show the buffer for the proc with PROCESS-ID."
   (interactive (list (elpakit/process-list-process-id)))
@@ -623,6 +630,12 @@ the second item is the process type either `:daemon' or
     (define-key
         elpakit-process-list-mode-map (kbd "L")
       'elpakit-process-show-buffer)
+    (define-key
+        elpakit-process-list-mode-map (kbd "F")
+      'elpakit-process-open-emacsd)
+    (define-key
+        elpakit-process-list-mode-map (kbd "f")
+      'elpakit-process-open-emacs-init)
     (tabulated-list-init-header))
 
 ;;;###autoload
