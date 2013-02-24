@@ -249,6 +249,15 @@ to make a process list of elpakit started processes. You can use this
 to show the log of an elpakit process (key {{{L}}}) or to kill a
 running elpakit process (key {{{K}}}) even if it's a daemon.
 
+Keys available:
+
+| F | elpakit-process-open-emacsd     | Open the emacsd directory in dired |
+| O | elpakit-process-open-emacsd     |                                    |
+| f | elpakit-process-open-emacs-init | Open the init.el file              |
+| K | elpakit-process-kill            | Kill the process or daemon         |
+| k | elpakit-process-kill            |                                    |
+| L | elpakit-process-show-buffer     | Show the process buffer            |
+
 == Refactoring Support ==
 
 Elpakit includes some support for refactoring. When you are dealing
