@@ -7,7 +7,7 @@
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
-;; Version: 0.0.16
+;; Version: 0.0.17
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -631,6 +631,17 @@ the second item is the process type either `:daemon' or
           ;; Else switch to the buffer
           (switch-to-buffer buf)))))
 
+(defun elpakit-process-open-shell (process-id)
+  (interactive (list (elpakit/process-list-process-id)))
+  (destructuring-bind (name type process &rest other)
+      (gethash process-id elpakit/processes)
+    (let ((errm "elpakit-procss-open-shell"))
+      (unless (eq type :daemon)
+        (error "%s needs a daemon - %s" errm process-id))
+      (unless (featurep 'isea)
+        (error "%s needs isea - M-x package-install isea ?" errm))
+      (isea process-id))))
+
 (define-derived-mode
     elpakit-process-list-mode tabulated-list-mode "Elpakit process list"
     "Major mode for listing Elpakit processes."
@@ -651,6 +662,9 @@ the second item is the process type either `:daemon' or
     (define-key
         elpakit-process-list-mode-map (kbd "f")
       'elpakit-process-open-emacs-init)
+    (define-key
+        elpakit-process-list-mode-map (kbd "I")
+      'elpakit-process-open-shell)
     (tabulated-list-init-header))
 
 ;;;###autoload
