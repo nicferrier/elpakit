@@ -785,7 +785,9 @@ presuming that you're trying to start it from the same user."
                        emacs-bin args)))
       (with-current-buffer (process-buffer proc)
         (compilation-mode))
-      (elpakit/process-add unique :daemon proc)
+      (elpakit/process-add
+       unique :daemon proc ; then the extra stuff
+       install :pre-lisp pre-lisp :extra-lisp extra-lisp)
       (cons proc unique))))
 
 ;;;###autoload
