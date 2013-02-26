@@ -199,7 +199,7 @@ The list is returned sorted and with absolute files."
     (if (file-directory-p dest)
         (delete-directory dest t)
         (delete-file dest)))
-  (message "elpakit/copy %s to %s" source dest)
+  ;;(message "elpakit/copy %s to %s" source dest)
   (copy-file source dest))
 
 (defun elpakit/file->package (file &rest selector)
