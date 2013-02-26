@@ -681,6 +681,9 @@ elpakit processes from batch tests and daemons."
 
 (defalias 'list-elpakit-processes 'elpakit-list-processes)
 
+
+;; Process spawning
+
 (defun elpakit/sentinel (process event)
   "Sentintel to kill the elpakit process when necessary."
   (if (or (string-equal event "finished\n")
