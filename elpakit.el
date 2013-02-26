@@ -589,9 +589,9 @@ the second item is the process type either `:daemon' or
                 (string-match-p "^\\(No such server\\|Make client process\\)"
                                 (cadr err)))
                ;; Rethrow if anything else
-               (signal (car err) (cdr err)))))
-        ;; Now safely delete the process from elpakit's list
-        (elpakit/process-del name))
+               (signal (car err) (cdr err))))))
+      ;; Now safely delete the process from elpakit's list
+      (elpakit/process-del name)
       ;; Update the list if necessary
       (when (equal (buffer-name (current-buffer))
                    "*elpakit-processes*")
