@@ -687,7 +687,9 @@ elpakit processes from batch tests and daemons."
           (string-equal event "exited abnormally with code exitcode\n"))
       (elpakit/process-del (process-name process))))
 
-(defun elpakit/emacs-process (archive-dir install test)
+(defun* elpakit/emacs-process (archive-dir
+                               install test
+                               &key extra-lisp pre-lisp)
   "Start an Emacs test process with the ARCHIVE-DIR repository.
 
 Install the package INSTALL and then run batch tests on TEST.
@@ -707,6 +709,7 @@ could have come from anywhere."
             ,(format
               (concat
                "(progn"
+               "%s"
                "(setq package-archives (quote %S))"
                "(setq package-user-dir %S)"
                "(package-initialize)"
@@ -714,6 +717,7 @@ could have come from anywhere."
                "(package-install (quote %S))"
                "(load-library \"%S\")"
                "(ert-run-tests-batch \"%s.*\"))")
+              (if pre-lisp (format "%S" pre-lisp) "")
               (acons "local" archive-dir package-archives)
               elpa-dir ;; where packages will be installed to
               install
@@ -834,10 +838,19 @@ command."
   "History variable for `elpakit-test'.")
 
 ;;;###autoload
-(defun elpakit-test (package-list install test)
+(defun* elpakit-test (package-list install test &key pre-lisp extra-lisp)
   "Run tests on package INSTALL of the specified PACKAGE-LIST.
 
 TEST is an ERT test selector.
+
+If EXTRA-LISP is a list then that is passed into the test-process
+to be executed as extra initialization.  If EXTRA-LISP and TEST
+is specified then tests are done *after* EXTRA-LISP.  EXTRA-LISP
+must do the require in that case.
+
+If PRE-LISP is a list then it is passed into the test-process as
+Lisp to be executed before initialization.  This is where any
+customization that you need should go.
 
 You can manage running processes with the `elpakit-list-processes'
 command."
