@@ -703,33 +703,42 @@ with the ARCHIVE-DIR being an additional repository called
 
 The ARCHIVE-DIR was presumably built with elpakit, though it
 could have come from anywhere."
-  (let* ((elpa-dir (make-temp-file ".emacs.elpa" t))
+  (let* ((unique (make-temp-name "elpakit-emacs-batchtests"))
+         (elpa-dir (concat "/tmp/" unique ".emacsd"))
          (emacs-bin (concat invocation-directory invocation-name))
+         (boot-file (concat "/tmp/" unique ".emacs-init.el"))
          (args
-          `("-batch"
-            "-Q"
-            "--eval"
-            ,(format
-              (concat
-               "(progn"
-               "%s"
-               "(setq package-archives (quote %S))"
-               "(setq package-user-dir %S)"
-               "(package-initialize)"
-               "(package-refresh-contents)"
-               "(package-install (quote %S))"
-               "(load-library \"%S\")"
-               "(ert-run-tests-batch \"%s.*\"))")
-              (if pre-lisp (format "%S" pre-lisp) "")
-              (acons "local" archive-dir package-archives)
-              elpa-dir ;; where packages will be installed to
-              install
-              install
-              test)))
+          (progn
+            (with-temp-file boot-file
+              (insert (format
+                       (concat
+                        "(progn"
+                        "%s"
+                        "(setq package-archives (quote %S))"
+                        "(setq package-user-dir %S)"
+                        "(package-initialize)"
+                        "(package-refresh-contents)"
+                        "(package-install (quote %S))"
+                        "(load-library \"%S\")"
+                        "%s"
+                        "(ert-run-tests-batch \"%s.*\"))")
+                       (if pre-lisp (format "%S" pre-lisp) "")
+                       (acons "local" archive-dir package-archives)
+                       elpa-dir ;; where packages will be installed to
+                       install
+                       install
+                       (if extra-lisp
+                           (mapconcat
+                            (lambda (a) (format "%S" a))
+                            extra-lisp "\n")
+                           "")
+                       test)))
+            ;; And now the actual args
+            (list "--batch" "-Q" "-l" boot-file)))
          (name (generate-new-buffer-name
                 (concat "elpakit-" (symbol-name install))))
          (proc (apply 'start-process name (format "*%s*" name) emacs-bin args)))
-    (elpakit/process-add name :batch proc)
+    (elpakit/process-add name :batch proc boot-file)
     (set-process-sentinel proc 'elpakit/sentinel)
     (with-current-buffer (process-buffer proc)
       (compilation-mode))
