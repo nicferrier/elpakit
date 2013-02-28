@@ -527,7 +527,8 @@ the second item is the process type either `:daemon' or
   (let (res)
     (maphash
      (lambda (k v)
-       (setq res (append (list v) res)))
+       (if (server-running-p k)
+           (setq res (append (list v) res))))
      elpakit/processes)
     res))
 
@@ -599,11 +600,16 @@ the second item is the process type either `:daemon' or
 
 (defun elpakit/process-list-process-id ()
   "Get the process-id from the process-list buffer."
-  (buffer-substring-no-properties
-   (line-beginning-position)
-   (save-excursion
-     (goto-char (line-beginning-position))
-     (- (re-search-forward " " nil t) 1))))
+  (let ((process-id (buffer-substring-no-properties
+                     (line-beginning-position)
+                     (save-excursion
+                       (goto-char (line-beginning-position))
+                       (- (re-search-forward " " nil t) 1)))))
+    (if (server-running-p process-id)
+        process-id
+      (elpakit/process-del process-id)
+      (revert-buffer)
+      (error "Server no longer running"))))
 
 (defun elpakit-process-open-emacsd (process-id)
   "Open the .emacs.d directory for the specified PROCESS-ID."
