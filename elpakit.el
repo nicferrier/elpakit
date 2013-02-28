@@ -527,8 +527,12 @@ the second item is the process type either `:daemon' or
   (let (res)
     (maphash
      (lambda (k v)
-       (if (server-running-p k)
-           (setq res (append (list v) res))))
+       (destructuring-bind (proc-name proc-type &rest rest) v
+         (when (or
+                (eq proc-type :batch)
+                (and (eq proc-type :daemon)
+                     (server-running-p k)))
+           (setq res (append (list v) res)))))
      elpakit/processes)
     res))
 
