@@ -896,7 +896,9 @@ command."
   (let ((archive-dir (make-temp-file "elpakit-archive" t)))
     ;; First build the elpakit with tests
     (elpakit archive-dir package-list t)
-    (elpakit/emacs-process archive-dir install test)
+    (elpakit/emacs-process
+     archive-dir install test
+     :pre-lisp pre-lisp :extra-lisp extra-lisp)
     (when (called-interactively-p)
       (switch-to-buffer-other-window "*elpakit*"))))
 
