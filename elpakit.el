@@ -887,20 +887,20 @@ command."
      (assert
       (listp test-recipe)
       "there's no package in the current dir?")
-     (with-current-buffer (get-buffer-create "*elpakit*") (erase-buffer))
      ;; deliver the interctive args
      (list (list default-directory)
            (car test-recipe)
            (read-from-minibuffer
             "ERT selector: " nil nil nil elpakit/test-ert-selector-history))))
-  (let ((archive-dir (make-temp-file "elpakit-archive" t)))
+  (let ((archive-dir (make-temp-file "elpakit-archive" t))
+        process)
     ;; First build the elpakit with tests
     (elpakit archive-dir package-list t)
-    (elpakit/emacs-process
+    (setq process (elpakit/emacs-process
      archive-dir install test
-     :pre-lisp pre-lisp :extra-lisp extra-lisp)
+     :pre-lisp pre-lisp :extra-lisp extra-lisp))
     (when (called-interactively-p)
-      (switch-to-buffer-other-window "*elpakit*"))))
+      (switch-to-buffer-other-window (process-buffer process)))))
 
 
 ;;; Other tools on top of elpakit
