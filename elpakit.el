@@ -921,28 +921,13 @@ All lisp files in the current elpakit are considered.
    (list
     (current-buffer)
     (thing-at-point 'symbol)))
-  (let ((recipe-dir
-         (file-name-as-directory
-          (car
-           (directory-files
-            (file-name-directory
-             (buffer-file-name buffer))
-            t "recipes")))))
-    (if (file-exists-p recipe-dir)
-        (let* ((recipe-list
-                (with-current-buffer
-                    (find-file-noselect
-                     (car (directory-files recipe-dir t "^[^.].*[^~]$")))
-                  (save-excursion
-                    (goto-char (point-min))
-                    (read
-                     (current-buffer)))))
-               (files (plist-get (cdr recipe-list) :files))
-               (elisp (elpakit/files-to-elisp files))
-               (elisp-buffers
-                (loop for filename in elisp
-                   collect (find-file-noselect filename))))
-          (multi-occur elisp-buffers thing)))))
+  (let* ((files
+          (elpakit/package-files (elpakit/get-recipe ".")))
+         (elisp (elpakit/files-to-elisp files))
+         (elisp-buffers
+          (loop for filename in elisp
+             collect (find-file-noselect filename))))
+    (multi-occur elisp-buffers thing)))
 
 (defvar elpakit/isearch-keymap nil
   "The keymap containing extra things we enable during isearch.")
