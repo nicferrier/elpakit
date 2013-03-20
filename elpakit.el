@@ -357,22 +357,14 @@ Opens the directory the package has been built in."
 (defun elpakit/do-eval (package-dir)
   "Just eval the elisp files in the package in PACKAGE-DIR."
   (assert (file-directory-p package-dir))
-  (let ((package-name
-         (file-name-sans-extension
-          (file-name-nondirectory package-dir))))
-    (if (elpakit/file-in-dir-p "recipes" package-dir)
-        ;; Find the list of files from the recipe
-        (let* ((recipe (elpakit/get-recipe package-dir))
-               (files (elpakit/package-files recipe)))
-          (loop for file in files
-             if (equal (file-name-extension file) "el")
-             do
-               (with-current-buffer
-                   (find-file-noselect
-                    (expand-file-name file package-dir))
-                 (eval-buffer))))
-        ;; Else could we work out what the package file is?
-        )))
+  (let* ((files (elpakit/package-files (elpakit/get-recipe package-dir)))
+         (elisp (elpakit/files-to-elisp files)))
+    (loop for file in elisp
+       do
+         (with-current-buffer
+             (find-file-noselect
+              (expand-file-name file package-dir))
+           (eval-buffer)))))
 
 (defun elpakit/build-recipe (destination recipe)
   "Build the package with the RECIPE."
@@ -452,6 +444,14 @@ test-package cons."
 ;;;###autoload
 (defun elpakit-eval (package-list)
   "Eval all the elisp files in PACKAGE-LIST."
+  (interactive
+   (list
+    (let* ((minibuffer-completing-symbol t)
+           (form (read-from-minibuffer
+                  "Package list: "
+                  nil read-expression-map t
+                  'read-expression-history)))
+      (if (symbolp form) (symbol-value form) form))))
   (loop for package in package-list
      do (elpakit/do-eval package)))
 
