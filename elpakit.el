@@ -921,8 +921,7 @@ All lisp files in the current elpakit are considered.
    (list
     (current-buffer)
     (thing-at-point 'symbol)))
-  (let* ((files
-          (elpakit/package-files (elpakit/get-recipe ".")))
+  (let* ((files (elpakit/package-files (elpakit/get-recipe ".")))
          (elisp (elpakit/files-to-elisp files))
          (elisp-buffers
           (loop for filename in elisp
