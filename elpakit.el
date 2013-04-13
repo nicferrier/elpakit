@@ -397,6 +397,13 @@ source directory.
 If the prefix argument is used interactively, then this will also
 prompt for the destination directory.
 
+If the customization value
+`elpakit-do-melpa-on-multi-file-package' is `t' and the
+PACKAGE-DIR is a git repository then an orphan branch called
+\"melpa\" is created in the repository and populated with the
+files from the package.  This includes the pkg.el file necessary
+to a multi-file package, which elpakit builds automatically.
+
 Opens the directory the package has been built in."
   (interactive
    (list
