@@ -311,8 +311,9 @@ RECIPE specifies the package in a plist s-expression form."
          (package-info
           (vector name requires docstring version readme)))
     ;; Now copy everything to the destination
-    (unless (file-exists-p destdir)
-      (make-directory destdir t))
+    (when (file-exists-p destdir)
+      (delete-directory destdir t))
+    (make-directory destdir t)
     ;; Copy the actual package files
     (loop for file in files
        do (let ((dest-file
