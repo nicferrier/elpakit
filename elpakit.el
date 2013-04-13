@@ -334,23 +334,39 @@ RECIPE specifies the package in a plist s-expression form."
     package-info))
 
 ;;;###autoload
-(defun elpakit-make-multi (package-dir)
-  "Make a multi-package.
+(defun elpakit-make-multi (package-dir &optional destination-dir)
+  "Make a multi-package out of PACKAGE-DIR.
 
 If the directory you are in is a package then it is built,
 otherwise this asks you for a package directory.
+
+Optionally, make the package file in the specified
+DESTINTATION-DIR.
+
+If called interactively, this will default to building the
+current directory as a package, if it has a 'recipes' directory.
+If no 'recipes' directory can be found it will prompt for the
+source directory.
+
+If the prefix argument is used interactively, then this will also
+prompt for the destination directory.
 
 Opens the directory the package has been built in."
   (interactive
    (list
     (if (directory-files default-directory nil "^recipes$")
         default-directory
-        (read-directory-name "Package-dir: " default-directory))))
+        (read-directory-name "Package-dir: " default-directory))
+    (when current-prefix-arg
+      (read-directory-name "Destination dir:" default-directory))))
   (let* ((dir-flag t)
          (package-name
           (file-name-sans-extension
            (file-name-nondirectory package-dir)))
-         (dest (make-temp-file package-name dir-flag "elpakit")))
+         (dest
+          (if (file-directory-p destination-dir)
+              destination-dir
+              (make-temp-file package-name dir-flag "elpakit"))))
     (elpakit/build-multi dest (elpakit/get-recipe package-dir))
     (find-file dest)))
 
