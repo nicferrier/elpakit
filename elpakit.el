@@ -380,7 +380,13 @@ Opens the directory the package has been built in."
          (with-current-buffer
              (find-file-noselect
               (expand-file-name file package-dir))
-           (eval-buffer)))))
+           (condition-case err
+               (eval-buffer)
+             (file-error
+              (let ((lastcons (last elisp)))
+                (setcdr elisp
+                        (cons (car lastcons)
+                              (append lastcons (list file)))))))))))
 
 (defun elpakit/build-recipe (destination recipe)
   "Build the package with the RECIPE."
@@ -462,10 +468,13 @@ test-package cons."
   "Eval all the elisp files in PACKAGE-LIST."
   (interactive
    (list
-    (let* ((minibuffer-completing-symbol t)
+    (let* ((current-kit
+            (when (directory-files default-directory "^recipes$")
+              (list default-directory)))
+           (minibuffer-completing-symbol t)
            (form (read-from-minibuffer
                   "Package list: "
-                  nil read-expression-map t
+                  (format "%S" current-kit) read-expression-map t
                   'read-expression-history)))
       (if (symbolp form) (symbol-value form) form))))
   (loop for package in package-list
