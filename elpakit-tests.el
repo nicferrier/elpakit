@@ -121,8 +121,10 @@
      "0.9.9.6.1"]
     ;; Return the package info WITHOUT the README
     (substring
-     (elpakit/build-multi "/tmp/elpakittest" "~/work/elnode-auth")
-     0 4)))
+     (elpakit/build-multi
+      "/tmp/elpakittest"
+      (elpakit/get-recipe 
+       "~/work/elnode-auth")) 0 4)))
   ;; Test the interveening files
   (should (file-exists-p "/tmp/elnode-0.9.9.6.1/elnode.el"))
   (should (file-exists-p "/tmp/elnode-0.9.9.6.1/elnode-pkg.el"))
