@@ -717,7 +717,7 @@ the second item is the process type either `:daemon' or
          (if (or
               (eq proc-type :batch)
               (and (eq proc-type :daemon)
-                   (server-running-p k)))
+                   (server-running-p process-id)))
              process-id
              ;; Else...
              (elpakit/process-del process-id)
@@ -759,7 +759,7 @@ the second item is the process type either `:daemon' or
         (error "%s needs a daemon - %s" errm process-id))
       (unless (featurep 'isea)
         (error "%s needs isea - M-x package-install isea ?" errm))
-      (isea process-id))))
+      (funcall 'isea process-id))))
 
 (define-derived-mode
     elpakit-process-list-mode tabulated-list-mode "Elpakit process list"
@@ -925,6 +925,10 @@ presuming that you're trying to start it from the same user."
        install :pre-lisp pre-lisp :extra-lisp extra-lisp)
       (cons proc unique))))
 
+
+(defvar elpakit-unique-handle nil)
+(make-variable-buffer-local 'elpakit-unique-handle)
+
 ;;;###autoload
 (defun* elpakit-start-server (package-list
                               install
@@ -961,7 +965,6 @@ command."
            (daemon-value
             (elpakit/emacs-server archive-dir install extra pre-lisp)))
       (with-current-buffer (get-buffer-create "*elpakit-daemon*")
-        (make-variable-buffer-local 'elpakit-unique-handle)
         (setq elpakit-unique-handle (cdr daemon-value))
         daemon-value))))
 
@@ -1002,7 +1005,7 @@ command."
     (setq process (elpakit/emacs-process
      archive-dir install test
      :pre-lisp pre-lisp :extra-lisp extra-lisp))
-    (when (called-interactively-p)
+    (when (called-interactively-p 'interactive)
       (switch-to-buffer-other-window (process-buffer process)))))
 
 
