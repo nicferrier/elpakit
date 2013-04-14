@@ -335,6 +335,21 @@ directory. It will open the temporary directory with the built package
 in it. You can use that to upload to Marmalade or some such.
 
 
+=== Making a multi-file package branch for MELPA ===
+
+MELPA requires multi-file packages repositories to be packaged in a
+particular way. Namely that they should have the pkg.el file present
+in the repository.
+
+elpakit will automatically build an orphan branch for you in your
+repository for use by MELPA.
+
+Just set the customization variable
+{{{elpakit-do-melpa-on-multi-file-package}}} to true and then use
+{{{elpakit-make-multi}}} on a git repository based multi-file package
+and elpakit will make the branch for you. Elpakit won't push the
+branch so you get to review stuff before it goes back to your origin.
+
 === Evaling an elpakit ===
 
 You can build an elpakit entirely inside your emacs. This basically
