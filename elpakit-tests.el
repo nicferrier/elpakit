@@ -148,4 +148,64 @@
      (elpakit/do "/tmp/elpakittest" "~/work/elnode-auth")
      0 4))))
 
+(ert-deftest elpakit/recipe->pkg-info ()
+  "Test turning recipe into the internal vector package type."
+  (let ((recipe
+         '(elnode
+           :version "0.9.9.1"
+           :doc "The Emacs webserver."
+           :files ("elnode.el"
+                   "elnode-tests.el"
+                   "elnode-rle.el"
+                   "elnode-wiki.el"
+                   "default-wiki-index.creole"
+                   "default-webserver-test.html"
+                   "default-webserver-image.png"
+                   "README.creole"
+                   "COPYING")
+           :requires ((web "0.1.4")
+                      (db "0.0.1")
+                      (kv "0.0.9")
+                      (fakir "0.0.14")
+                      (creole "0.8.14")))))
+    (should
+     (equal
+      ["elnode"
+       ((web (0 1 4))
+        (db (0 0 1))
+        (kv (0 0 9))
+        (fakir (0 0 14))
+        (creole (0 8 14)))
+       "The Emacs webserver."
+       "0.9.9.1"]
+      ;; We do take off the README
+      (subseq 
+       (elpakit/recipe->pkg-info recipe)
+       0 4)))))
+
+(ert-deftest elpakit/pjg-info->versioned-name ()
+  "Test turning recipe into the internal vector package type."
+  (let ((recipe
+         '(elnode
+           :version "0.9.9.1"
+           :doc "The Emacs webserver."
+           :files ("elnode.el"
+                   "elnode-tests.el"
+                   "elnode-rle.el"
+                   "elnode-wiki.el"
+                   "default-wiki-index.creole"
+                   "default-webserver-test.html"
+                   "default-webserver-image.png"
+                   "README.creole"
+                   "COPYING")
+           :requires ((web "0.1.4")
+                      (db "0.0.1")
+                      (kv "0.0.9")
+                      (fakir "0.0.14")
+                      (creole "0.8.14")))))
+    (should
+     (equal "elnode-0.9.9.1"
+            (elpakit/pkg-info->versioned-name
+             (elpakit/recipe->pkg-info recipe))))))
+
 ;;; elpakit-tests.el ends here

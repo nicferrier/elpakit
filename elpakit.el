@@ -295,6 +295,7 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
         "")))
 
 (defun elpakit/require-versionify (require-list)
+  "Make a proper version list from the REQUIRE-LIST."
   (mapcar
    (lambda (elt)
      (list
@@ -302,49 +303,63 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
       (version-to-list (cadr elt))))
    require-list))
 
+(defun elpakit/recipe->pkg-info (recipe)
+  "Convert the RECIPE to a package info vector."
+  (let* ((package-decl 
+          (package-read-from-string
+           (format "%S" (elpakit/recipe->package-decl recipe))))
+         (name (nth 1 package-decl))
+         (version (nth 2 package-decl))
+         (docstring (nth 3 package-decl))
+         (require-list (nth 4 package-decl))
+         (requires (elpakit/require-versionify require-list))
+         (readme (elpakit/readme recipe))
+         (package-info
+          (vector name requires docstring version readme)))
+    package-info))
+
+(defun elpakit/pkg-info->versioned-name (pkg-info)
+  "Make the versioned package name from the PKG-INFO vector."
+  (destructuring-bind
+        (name requires docstring version readme)
+      (mapcar 'identity pkg-info)
+    (format "%s-%s" name version)))
+
 (defun elpakit/build-multi (destination recipe)
   "Build a multi-file package into DESTINATION.
 
 RECIPE specifies the package in a plist s-expression form."
-  (let* ((package-info
-          (package-read-from-string
-           (format "%S" (elpakit/recipe->package-decl recipe))))
-         (files (elpakit/package-files recipe))
-         (name (nth 1 package-info))
-         (version (nth 2 package-info))
-         (docstring (nth 3 package-info))
-         (require-list (nth 4 package-info))
-         (requires (elpakit/require-versionify require-list))
-         (readme (elpakit/readme recipe))
-         (qname (format "%s-%s" name version))
-         (destdir (concat
-                   "/tmp/" ;;(file-name-as-directory destination)
-                   (file-name-as-directory qname)))
-         (package-info
-          (vector name requires docstring version readme)))
-    ;; Now copy everything to the destination
-    (when (file-exists-p destdir)
-      (delete-directory destdir t))
-    (make-directory destdir t)
-    ;; Copy the actual package files
-    (loop for file in files
-       do (let ((dest-file
-                 (concat destdir (file-name-nondirectory file))))
-            (elpakit/copy file dest-file)))
-    ;; Write the package file
-    (elpakit/make-pkg-lisp destdir package-info)
-    ;; Check we have the package archive destination
-    (unless (file-exists-p destination)
-      (make-directory destination t))
-    ;; Now we make the destination tarball
-    (shell-command-to-string
-     (format "tar cf /tmp/%s.tar -C /tmp %s" qname qname))
-    ;; Now copy to the destination
-    (elpakit/copy (format "/tmp/%s.tar" qname)
-                  (concat (file-name-as-directory destination)
-                          (format "%s.tar" qname)))
-    ;; Return the info
-    package-info))
+  (let* ((files (elpakit/package-files recipe))
+         (pkg-info
+          (elpakit/recipe->pkg-info recipe))
+         (qname
+          (elpakit/pkg-info->versioned-name pkg-info)))
+    (let* ((destdir (concat
+                     "/tmp/"
+                     (file-name-as-directory qname))))
+      ;; Now copy everything to the destination
+      (when (file-exists-p destdir)
+        (delete-directory destdir t))
+      (make-directory destdir t)
+      ;; Copy the actual package files
+      (loop for file in files
+         do (let ((dest-file
+                   (concat destdir (file-name-nondirectory file))))
+              (elpakit/copy file dest-file)))
+      ;; Write the package file
+      (elpakit/make-pkg-lisp destdir pkg-info)
+      ;; Check we have the package archive destination
+      (unless (file-exists-p destination)
+        (make-directory destination t))
+      ;; Now we make the destination tarball
+      (shell-command-to-string
+       (format "tar cf /tmp/%s.tar -C /tmp %s" qname qname))
+      ;; Now copy to the destination
+      (elpakit/copy (format "/tmp/%s.tar" qname)
+                    (concat (file-name-as-directory destination)
+                            (format "%s.tar" qname)))
+      ;; Return the info
+      pkg-info)))
 
 (defun elpakit/melpaize (repo tarball)
   "Make a `melpa' branch in the REPO directory from PACKAGE.
@@ -420,13 +435,17 @@ Opens the directory the package has been built in."
          (dest
           (if (file-directory-p destination-dir)
               destination-dir
-              (make-temp-file package-name dir-flag "elpakit"))))
-    (elpakit/build-multi dest (elpakit/get-recipe directory))
-    ;; Should we make a melpa thing?
+              (make-temp-file package-name dir-flag "elpakit")))
+         (package-info (elpakit/build-multi
+                        dest (elpakit/get-recipe directory))))
+    ;; Check whether we should do melpa branch management
     (when (and
            (file-directory-p (concat directory ".git"))
            elpakit-do-melpa-on-multi-file-package)
-      (elpakit/melpaize directory (car (directory-files dest t ".*\\.tar$"))))
+      (let ((tar (elpakit/pkg-info->versioned-name package-info)))
+        (elpakit/melpaize
+         directory
+         (car (directory-files dest t (concat tar ".tar"))))))
     (find-file dest)))
 
 (defun elpakit/do-eval (package-dir)
