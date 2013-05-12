@@ -427,14 +427,15 @@ Opens the directory the package has been built in."
         (read-directory-name "Package-dir: " default-directory))
     (when current-prefix-arg
       (read-directory-name "Destination dir:" default-directory))))
-  (let* ((dir-flag t)
+  (let* ((dest-dir (or destination-dir default-directory))
+         (dir-flag t)
          (directory (file-name-as-directory package-dir))
          (package-name
           (file-name-sans-extension
            (car (last (split-string directory "/" t)))))
          (dest
-          (if (file-directory-p destination-dir)
-              destination-dir
+          (if (file-directory-p dest-dir)
+              dest-dir
               (make-temp-file package-name dir-flag "elpakit")))
          (package-info (elpakit/build-multi
                         dest (elpakit/get-recipe directory))))
