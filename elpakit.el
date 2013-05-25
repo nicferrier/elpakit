@@ -1009,6 +1009,58 @@ command."
     (when (called-interactively-p 'interactive)
       (switch-to-buffer-other-window (process-buffer process)))))
 
+(defun elpakit/make-package-list ()
+  "Make a list of your currently installed packages."
+  (let ((package-regex "\\([a-zA-Z-]+\\)-\\([0-9.]+\\)"))
+    (loop for entry-lst
+       in (-group-by
+           (lambda (a)
+             (string-match package-regex a)
+             (match-string 1 a)) 
+           (directory-files package-user-dir nil package-regex))
+       collect 
+         (sort
+          (cdr entry-lst)
+          (lambda (a b)
+            (let ((va
+                   (progn
+                     (string-match package-regex a)
+                     (match-string 2 a)))
+                  (vb
+                   (progn
+                     (string-match package-regex b)
+                     (match-string 2 b))))
+              (version< vb va)))))))
+
+(defun elpakit-elpa-list-kill ()
+  (interactive)
+  (let (buffer-read-only)
+    (save-excursion
+      (delete-region (line-beginning-position) (+ 1 (line-end-position))))))
+
+(define-derived-mode elpakit-elpa-list-mode fundamental-mode
+  "Elpakit elpa package list"
+  "Major mode for listing currently installed ELPA packages."
+  (setq buffer-read-only t)
+  (define-key elpakit-elpa-list-mode-map (kbd "k")
+    'elpakit-elpa-list-kill)
+  (define-key elpakit-elpa-list-mode-map (kbd "q")
+    'kill-buffer))
+
+(defun elpakit-package-list-buf ()
+  "Make a buffer with the package list in it."
+  (interactive)
+  (let ((package-list (elpakit/make-package-list)))
+    (with-current-buffer (get-buffer-create "*elpakit-elpa-list*")
+      (erase-buffer)
+      (save-excursion
+        (loop for package-entry in package-list
+           do (progn
+                (insert (car package-entry))
+                (newline))))
+      (elpakit-elpa-list-mode)
+      (switch-to-buffer (current-buffer)))))
+
 
 ;;; Other tools on top of elpakit
 
