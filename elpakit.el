@@ -1011,9 +1011,7 @@ command."
 
 (defun elpakit/new-file-name-predicate (file-name)
   "Check FILE-NAME is a new elisp file in an existing directory."
-  (and (not (file-exists-p file-name))
-       (file-exists-p (file-name-directory file-name))
-       (equal "el" (file-name-extension file-name))))
+  (equal "el" (file-name-extension file-name)))
 
 (defun elpakit-make-elpa-package (file-name)
   "Make FILE-NAME ELPA package requiring the specified packages.
@@ -1034,20 +1032,37 @@ you."
   (assert (elpakit/new-file-name-predicate file-name))
   ;; First split the lines from the existing buffer, this is the
   ;; required package list.
-  (let ((lines (split-string (buffer-string) "\n"))
+  (let* ((lines (split-string (buffer-string) "\n"))
+         (elpa-requires-list
+          (loop for line in lines
+             if (get-text-property 0 :name line)
+             collect
+               (list
+                (make-symbol (get-text-property 0 :name line))
+                (get-text-property 0 :version line))))
+         (elpa-requires
+          (format ";; Package-Requires: %S\n" elpa-requires-list))
         (new-package-buf (find-file file-name)))
-    (with-current-buffer new-package-buf
-      (save-excursion
-        (goto-char (point-min))
-        (when (re-search-forward "^;; Author: " nil t)
-          (forward-line)
-          (insert
-           (format ";; Package-Requires: %S\n"
-                   (loop for line in lines
-                      if (get-text-property 0 :name line)
-                      collect (list (make-symbol (get-text-property 0 :name line))
-                                    (get-text-property 0 :version line)))))
-          (switch-to-buffer new-package-buf))))))
+    (switch-to-buffer new-package-buf)
+    (save-excursion
+      (goto-char (point-min))
+      (let ((code-start
+             (save-excursion
+               (re-search-forward "^\\(;;; Code:\\|(\\)" nil t))))
+        (if (re-search-forward "^;; Package-Requires: \\(.*\\)$" code-start t)
+            (replace-match (format "%S" elpa-requires-list) nil nil nil 1)
+            ;; Else try and find the place to put the header
+            (if (re-search-forward "^;; Author: " nil t)
+                (progn
+                  (forward-line)
+                  (insert elpa-requires))
+                ;; Else raise an error
+                (progn
+                  (kill-new elpa-requires)
+                  (signal
+                   'file-error
+                   (list
+                    "no package header? insert requires manually with `yank'")))))))))
 
 (defun elpakit/make-package-list ()
   "Make a list of your currently installed packages."
