@@ -1009,15 +1009,59 @@ command."
     (when (called-interactively-p 'interactive)
       (switch-to-buffer-other-window (process-buffer process)))))
 
+(defun elpakit/new-file-name-predicate (file-name)
+  "Check FILE-NAME is a new elisp file in an existing directory."
+  (and (not (file-exists-p file-name))
+       (file-exists-p (file-name-directory file-name))
+       (equal "el" (file-name-extension file-name))))
+
+(defun elpakit-make-elpa-package (file-name)
+  "Make FILE-NAME ELPA package requiring the specified packages.
+
+The FILE-NAME must have an existing directory and a be a new
+file.
+
+This is useful for making a package with a set of depends for
+packages you have so you can distribute it amongst a team or
+colleagues who want to share some or all of the same packages as
+you."
+  (interactive
+   (list
+    (read-file-name
+     "New Emacs-Lisp file name: " nil nil nil nil
+     'elpakit/new-file-name-predicate)))
+  ;; Check we have a new file
+  (assert (elpakit/new-file-name-predicate file-name))
+  ;; First split the lines from the existing buffer, this is the
+  ;; required package list.
+  (let ((lines (split-string (buffer-string) "\n"))
+        (new-package-buf (find-file file-name)))
+    (with-current-buffer new-package-buf
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward "^;; Author: " nil t)
+          (forward-line)
+          (insert
+           (format ";; Package-Requires: %S\n"
+                   (loop for line in lines
+                      if (get-text-property 0 :name line)
+                      collect (list (make-symbol (get-text-property 0 :name line))
+                                    (get-text-property 0 :version line)))))
+          (switch-to-buffer new-package-buf))))))
+
 (defun elpakit/make-package-list ()
   "Make a list of your currently installed packages."
   (let ((package-regex "\\([a-zA-Z-]+\\)-\\([0-9.]+\\)"))
     (loop for entry-lst
        in (-group-by
-           (lambda (a)
-             (string-match package-regex a)
-             (match-string 1 a)) 
-           (directory-files package-user-dir nil package-regex))
+           (lambda (a) (get-text-property 0 :name a))
+           (mapcar
+            (lambda (e)
+              (string-match package-regex e)
+              (propertize e
+                          :name (match-string 1 e)
+                          :version (match-string 2 e)))
+            (directory-files package-user-dir nil package-regex)))
        collect 
          (sort
           (cdr entry-lst)
@@ -1033,6 +1077,7 @@ command."
               (version< vb va)))))))
 
 (defun elpakit-elpa-list-kill ()
+  "Kill an item from the ELPA list."
   (interactive)
   (let (buffer-read-only)
     (save-excursion
@@ -1045,19 +1090,22 @@ command."
   (define-key elpakit-elpa-list-mode-map (kbd "k")
     'elpakit-elpa-list-kill)
   (define-key elpakit-elpa-list-mode-map (kbd "q")
-    'kill-buffer))
+    'kill-buffer)
+  (define-key elpakit-elpa-list-mode-map (kbd "M")
+    'elpakit-make-elpa-package))
 
 (defun elpakit-package-list-buf ()
   "Make a buffer with the package list in it."
   (interactive)
   (let ((package-list (elpakit/make-package-list)))
     (with-current-buffer (get-buffer-create "*elpakit-elpa-list*")
-      (erase-buffer)
-      (save-excursion
-        (loop for package-entry in package-list
-           do (progn
-                (insert (car package-entry))
-                (newline))))
+      (let (buffer-read-only)
+        (erase-buffer)
+        (save-excursion
+          (loop for package-entry in package-list
+             do (progn
+                  (insert (car package-entry))
+                  (newline)))))
       (elpakit-elpa-list-mode)
       (switch-to-buffer (current-buffer)))))
 
