@@ -495,6 +495,28 @@ defun, very useful startup routine:
 It only allows one at a time atm but that's still better than trying
 to do everything inside a single emacs.
 
+=== Making a package from your ELPA ===
+
+Elpakit will also let you make a package from your currently installed
+ELPA packages. This is useful if you want to share a lot of
+dependancies with friends or colleagues.
+
+{{{
+M-x elpakit-package-list-buf
+}}}
+
+Makes a buffer with a list of your packages in it.
+
+In the ELPA package list buffer:
+
+| Key | What it does                                                  |
+| k   | kill the current package                                 |
+| M   | make a new package file from the remaining package names |
+
+The package file that it makes can then be checked into Git (to be
+made available with MELPA) or uploaded
+to [[http://marmalade-repo.org|marmalade-repo]].
+
 == TODO ==
 
 * include any dir file and info files in multi-file packages
