@@ -7,7 +7,7 @@
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "1.0.3"))
-;; Version: 1.0.5
+;; Version: 1.0.6
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1109,6 +1109,7 @@ you."
   (define-key elpakit-elpa-list-mode-map (kbd "M")
     'elpakit-make-elpa-package))
 
+;;;###autoload
 (defun elpakit-package-list-buf ()
   "Make a buffer with the package list in it."
   (interactive)
