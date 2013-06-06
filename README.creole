@@ -101,7 +101,22 @@ Packages are directories with either:
 The recipe format is based on the MELPA format but extended to include
 the extra meta-data required by tar packages.
 
-Here are some examples for now.
+The keys that are present in a recipe file are:
+
+* name - the name of the package
+* version - the string version of the package
+* doc - a doc string
+* requires - the standard package requires sexp
+* files - a list of files that will be embedded in the package.
+* test - how to test the package
+
+The //files// component may include directories and the directories
+are then included in the package tarball.
+
+The //test// is a sort of recursive recipe, more information below.
+
+
+Here are some examples.
 
 {{{db}}} is a single file package, but the repository directory
 includes a tests file and the README:
@@ -116,7 +131,7 @@ often because there is enough intelligence in elpakit about what is in
 a repository directory to infer this recipe.
 
 elpakit can help with testing if you tell it about your test files and
-dependancies:
+dependancies, here's the recipe for //web//, an HTTP client:
 
 {{{
 (web
@@ -134,7 +149,7 @@ This is still a single file recipe. The test file and it's //requires//
 are not needed for running the package, only testing it. Therefore
 they do not need to be packaged.
 
-{{{elnode}}} is a tar package and has quite a lot of complexity:
+//elnode// is a tar package and has quite a lot of complexity:
 
 {{{
 (elnode
@@ -161,9 +176,39 @@ they do not need to be packaged.
   ("elnode-tests.el")))
 }}}
 
-Elnode is like this because it needs to deliver the default wiki
+//Elnode// is like this because it needs to deliver the default wiki
 pages, these must be packaged so they can be installed at package
 deploy time.
+
+//elmarmalade// is an example of packaging directories:
+
+{{{
+(marmalade-service
+ :version "2.0.9"
+ :doc "The Marmalade package store service."
+ :requires 
+ ((dash "1.1.0")
+  (s "1.6.0")
+  (s-buffer "0.0.4")
+  (elnode "0.9.9.6.11")
+  (htmlize "1.3.9"))
+ :files
+ ("marmalade-archive.el"
+  "marmalade-service.el"
+  "marmalade-customs.el"
+  "marmalade-boot.el"
+  "front-page.html"
+  "login-page.html"
+  "upload-page.html"
+  "static/style.css") ;; the directory 'static' will be included
+ :test
+ (:requires
+  ((fakir "0.1.1")
+   (s "1.4.0"))
+  :files
+  ("marmalade-tests.el"
+   "elnode-0.9.9.6.9.tar")))
+}}}
 
 == Test packages ==
 
