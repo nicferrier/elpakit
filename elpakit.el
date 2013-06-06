@@ -149,7 +149,8 @@ Files mentioned in the recipe are all absolute file names."
   "Returns the recipe for the PACKAGE-DIR.
 
 Ensure the file list is sorted and consisting of absolute file
-names.
+names.  Adds a `:base-files' key containing the original,
+un-absoluted files.
 
 If the recipe is not found as a file then we infer it from the
 PACKAGE-DIR with `elpakit/infer-recipe'."
@@ -158,13 +159,16 @@ PACKAGE-DIR with `elpakit/infer-recipe'."
              (recipe (with-current-buffer (find-file-noselect recipe-filename)
                        (goto-char (point-min))
                        (read (current-buffer)))))
-        (plist-put
-         (cdr recipe)
-         :files
-         (mapcar
-          (lambda (f) (elpakit/absolutize-file-name package-dir f))
-          ;;(sort (plist-get (cdr recipe) :files) 'string<)
-          (plist-get (cdr recipe) :files)))
+        (plist-put (cdr recipe)
+                   :base-files
+                   (plist-get (cdr recipe) :files))
+        (plist-put (cdr recipe)
+                   :files
+                   (mapcar
+                    (lambda (f)
+                      (elpakit/absolutize-file-name
+                       package-dir f))
+                    (plist-get (cdr recipe) :files)))
         recipe)
       ;; Else infer it
       (elpakit/infer-recipe package-dir)))
@@ -174,6 +178,10 @@ PACKAGE-DIR with `elpakit/infer-recipe'."
 
 The list is returned sorted and with absolute files."
   (plist-get (cdr recipe) :files))
+
+(defun elpakit/package-base-files (recipe)
+  "The list of base file names specified by the RECIPE."
+  (plist-get (cdr recipe) :base-files))
 
 (defun elpakit/mematch (pattern lst)
   "Find the PATTERN in the LST."
@@ -269,7 +277,9 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
   "Convert a recipe into a package declaration."
   (destructuring-bind (name
                        ;; FIXME we need all the MELPA recipe things here
-                       &key version doc requires files test) recipe
+                       &key
+                       version doc requires
+                       base-files files test) recipe
     `(define-package
          ,(symbol-name name)
          ,version
@@ -325,11 +335,37 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
       (mapcar 'identity pkg-info)
     (format "%s-%s" name version)))
 
+
+(defun elpakit/file-name-base-mask (file-name mask)
+  "Return the parts of FILE-NAME which follow a match for MASK.
+
+Examples:
+
+ (elpakit/file-name-mask \"/one/two/three\" \"/one/two\")  => \"three\"
+ (elpakit/file-name-mask \"/one/two/three/four\" \"/one/two\") => \"three/four\"
+ (elpakit/file-name-mask \"/one/two\" \"/\") => \"one/two\"
+ (elpakit/file-name-mask \"/two/three/four/five\" \"/one\") => nil
+
+In the final example there is no match with the MASK so we return
+`nil'."
+  (let* ((mask-parts (split-string mask "/" t))
+         (file-name-parts (split-string file-name "/" t))
+         (unmatched
+          (loop for part in file-name-parts
+             if mask-parts
+             unless (equal part (pop mask-parts)) return nil end
+             else 
+             collect part)))
+    (when unmatched
+      (mapconcat 'identity unmatched "/"))))
+
+
 (defun elpakit/build-multi (destination recipe)
   "Build a multi-file package into DESTINATION.
 
 RECIPE specifies the package in a plist s-expression form."
   (let* ((files (elpakit/package-files recipe))
+         (base-files (elpakit/package-base-files recipe))
          (pkg-info
           (elpakit/recipe->pkg-info recipe))
          (qname
@@ -343,9 +379,13 @@ RECIPE specifies the package in a plist s-expression form."
       (make-directory destdir t)
       ;; Copy the actual package files
       (loop for file in files
-         do (let ((dest-file
-                   (concat destdir (file-name-nondirectory file))))
-              (elpakit/copy file dest-file)))
+         do
+           (let ((dest-file
+                  (concat
+                   destdir
+                   (pop base-files))))
+             (make-directory (file-name-directory dest-file) t)
+             (elpakit/copy file dest-file)))
       ;; Write the package file
       (elpakit/make-pkg-lisp destdir pkg-info)
       ;; Check we have the package archive destination
