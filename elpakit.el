@@ -376,14 +376,15 @@ RECIPE specifies the package in a plist s-expression form."
         (delete-directory destdir t))
       (make-directory destdir t)
       ;; Copy the actual package files
-      (loop for file in files
-         do
-           (let ((dest-file
-                  (concat
-                   destdir
-                   (pop base-files))))
-             (make-directory (file-name-directory dest-file) t)
-             (elpakit/copy file dest-file)))
+      (when base-files
+        (loop for file in files
+           do
+             (let ((dest-file
+                    (concat
+                     destdir
+                     (pop base-files))))
+               (make-directory (file-name-directory dest-file) t)
+               (elpakit/copy file dest-file))))
       ;; Write the package file
       (elpakit/make-pkg-lisp destdir pkg-info)
       ;; Check we have the package archive destination
