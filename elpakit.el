@@ -366,10 +366,8 @@ In the final example there is no match with the MASK so we return
 RECIPE specifies the package in a plist s-expression form."
   (let* ((files (elpakit/package-files recipe))
          (base-files (elpakit/package-base-files recipe))
-         (pkg-info
-          (elpakit/recipe->pkg-info recipe))
-         (qname
-          (elpakit/pkg-info->versioned-name pkg-info)))
+         (pkg-info (elpakit/recipe->pkg-info recipe))
+         (qname (elpakit/pkg-info->versioned-name pkg-info)))
     (let* ((destdir (concat
                      "/tmp/"
                      (file-name-as-directory qname))))
