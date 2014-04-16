@@ -1030,9 +1030,7 @@ You can manage running processes with the `elpakit-list-processes'
 command."
   (interactive
    (let ((test-recipe (elpakit/test-plist->recipe default-directory)))
-     (assert
-      (listp test-recipe)
-      "there's no package in the current dir?")
+     (assert (listp test-recipe) "there's no package in the current dir?")
      ;; deliver the interctive args
      (list (list default-directory)
            (car test-recipe)
