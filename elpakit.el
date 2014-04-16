@@ -1041,8 +1041,8 @@ command."
     ;; First build the elpakit with tests
     (elpakit archive-dir package-list t)
     (setq process (elpakit/emacs-process
-     archive-dir install test
-     :pre-lisp pre-lisp :extra-lisp extra-lisp))
+                   archive-dir install test
+                   :pre-lisp pre-lisp :extra-lisp extra-lisp))
     (when (called-interactively-p 'interactive)
       (switch-to-buffer-other-window (process-buffer process)))))
 
