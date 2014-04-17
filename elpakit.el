@@ -678,6 +678,8 @@ then /tmp/my-elpakit will be copied to /tmp/new-elpakit."
                    (elpakit/do destination package do-tests)))
              (archive-list (elpakit/packages-list->archive-list packages-list))
              (archive-dir (file-name-as-directory destination)))
+        (when elpakit-make-full-archive
+          (elpakit/archive-list->elpa-list archive-list))
         (unless (file-exists-p archive-dir)
           (make-directory archive-dir t))
         (with-current-buffer
