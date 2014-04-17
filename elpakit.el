@@ -610,34 +610,45 @@ test-package cons."
                 type))))
 
 (defun elpakit/archive-list->elpa-list (archive-list)
-  "Make a list of ELPA dirs referred to by the archive.
+  "Make a list of ELPA packages referred to by the archive.
 
 This reduces the archive-list down to just the dependent packages
-that are in the local ELPA package store.
+that are specified in the archive list.
 
-Use this function to find out what dependencies to copy to save
-any depend."
+We use this function to resolve the missing depends from test
+packages.."
   (->> (--map
-        (-map
-         (lambda (x)
-           ;; make the depend spec into a cons of name
-           ;; and vector version
-           (cons (car x) (apply 'vector (cadr x))))
-         (elt (cdr it) 1)) ; pull the depend spec
+        (-map (lambda (x) (cons (car x) (apply 'vector (cadr x))))
+              (elt (cdr it) 1)) ; pull the depend spec
         (cdr archive-list))
     (-flatten)
     (--sort (string-lessp
              (symbol-name (car it))
              (symbol-name (car other))))
-    (-uniq)
-    (--keep
-     (let* ((package-name
-             (concat
-              (symbol-name (car it))
-              "-"
-              (package-version-join (mapcar 'identity (cdr it)))))
-            (package-fs-name (expand-file-name package-name package-user-dir)))
-       (and (file-exists-p package-fs-name) package-fs-name)))))
+    (--map (car it))
+    (-uniq)))
+
+(defun elpakit/archive-fetch-all (archive-list download-dir)
+  "Retrieve depends specified in ARCHIVE-LIST.
+
+The depends are pulled from `package-archives' via
+`package-download-transaction'.  Instead of unpacking them and
+storing them in the `package-user-dir' this stores them in
+DOWNLOAD-DIR."
+  (let ((dest (file-name-as-directory download-dir)))
+    (noflet ((package-unpack-single (name version desc requires)
+               (let ((pkg (buffer-string)))
+                 (with-temp-file
+                     (format "%s%s-%s.el" dest name version)
+                   (insert pkg))))
+             (package-download-tar (name version)
+               (let ((n (symbol-name name))
+                     (pkg (buffer-string)))
+                 (with-temp-file
+                     (format "%s%s-%s.tar" dest n version)
+                   (insert pkg)))))
+      (package-download-transaction
+       (elpakit/archive-list->elpa-list archive-list)))))
 
 (defvar elpakit-make-full-archive t
   "Set to `t' to get the archive resolution stuff working.")
