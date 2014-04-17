@@ -657,7 +657,7 @@ DESTINATION.
 If PACKAGE-LIST is an `:archive' reference then the specified
 archive is copied to DESTINATION.
 
-For example, if `pacckage-archives' is:
+For example, if `package-archives' is:
 
  '((\"local\" . \"/tmp/my-elpakit\")(\"gnu\" . \"http://gnu.org/elpa/\"))
 
