@@ -609,6 +609,39 @@ test-package cons."
                 (elt package 2) ; doc string
                 type))))
 
+(defun elpakit/archive-list->elpa-list (archive-list)
+  "Make a list of ELPA dirs referred to by the archive.
+
+This reduces the archive-list down to just the dependent packages
+that are in the local ELPA package store.
+
+Use this function to find out what dependencies to copy to save
+any depend."
+  (->> (--map
+        (-map
+         (lambda (x)
+           ;; make the depend spec into a cons of name
+           ;; and vector version
+           (cons (car x) (apply 'vector (cadr x))))
+         (elt (cdr it) 1)) ; pull the depend spec
+        (cdr archive-list))
+    (-flatten)
+    (--sort (string-lessp
+             (symbol-name (car it))
+             (symbol-name (car other))))
+    (-uniq)
+    (--keep
+     (let* ((package-name
+             (concat
+              (symbol-name (car it))
+              "-"
+              (package-version-join (mapcar 'identity (cdr it)))))
+            (package-fs-name (expand-file-name package-name package-user-dir)))
+       (and (file-exists-p package-fs-name) package-fs-name)))))
+
+(defvar elpakit-make-full-archive t
+  "Set to `t' to get the archive resolution stuff working.")
+
 ;;;###autoload
 (defun elpakit (destination package-list &optional do-tests)
   "Make a package archive at DESTINATION from PACKAGE-LIST.
