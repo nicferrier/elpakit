@@ -704,12 +704,13 @@ then /tmp/my-elpakit will be copied to /tmp/new-elpakit."
         (unless (file-exists-p archive-dir)
           (make-directory archive-dir t))
         (when elpakit-make-full-archive
-          (elpakit/archive-fetch-all archive-list archive-dir))
+          (setq archive-list
+                (elpakit/archive-fetch-all archive-list archive-dir)))
         (with-current-buffer
             (find-file-noselect
              (concat archive-dir "archive-contents"))
           (erase-buffer)
-          (insert (format "%S" (cons 1 archive-list)))
+          (insert (format "%s" (pp-to-string (cons 1 archive-list))))
           (save-buffer)))))
 
 (defconst elpakit/processes (make-hash-table :test 'equal)
