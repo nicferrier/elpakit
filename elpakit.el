@@ -634,21 +634,33 @@ packages.."
 The depends are pulled from `package-archives' via
 `package-download-transaction'.  Instead of unpacking them and
 storing them in the `package-user-dir' this stores them in
-DOWNLOAD-DIR."
-  (let ((dest (file-name-as-directory download-dir)))
+DOWNLOAD-DIR.
+
+A new copy of `archive-list' is returned with all the additional
+packages added to it."
+  (let ((new-arch-list (copy-list archive-list))
+        (dest (file-name-as-directory download-dir))
+        (new-archive-list archive-list))
     (noflet ((package-unpack-single (name version desc requires)
+               (push
+                (assq (intern name) package-archive-contents)
+                new-archive-list)
                (let ((pkg (buffer-string)))
                  (with-temp-file
                      (format "%s%s-%s.el" dest name version)
                    (insert pkg))))
              (package-download-tar (name version)
+               (push
+                (assq (intern name) package-archive-contents)
+                new-archive-list)
                (let ((n (symbol-name name))
                      (pkg (buffer-string)))
                  (with-temp-file
                      (format "%s%s-%s.tar" dest n version)
                    (insert pkg)))))
       (package-download-transaction
-       (elpakit/archive-list->elpa-list archive-list)))))
+       (elpakit/archive-list->elpa-list archive-list))
+      new-archive-list)))
 
 (defvar elpakit-make-full-archive t
   "Set to `t' to get the archive resolution stuff working.")
