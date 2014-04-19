@@ -638,13 +638,12 @@ DOWNLOAD-DIR.
 
 A new copy of `archive-list' is returned with all the additional
 packages added to it."
-  (let ((new-arch-list (copy-list archive-list))
-        (dest (file-name-as-directory download-dir))
-        (new-archive-list archive-list))
+  (let ((dest (file-name-as-directory download-dir))
+        (package-list (elpakit/archive-list->elpa-list archive-list)))
     (noflet ((package-unpack-single (name version desc requires)
                (push
                 (assq (intern name) package-archive-contents)
-                new-archive-list)
+                archive-list)
                (let ((pkg (buffer-string)))
                  (with-temp-file
                      (format "%s%s-%s.el" dest name version)
@@ -652,15 +651,14 @@ packages added to it."
              (package-download-tar (name version)
                (push
                 (assq (intern name) package-archive-contents)
-                new-archive-list)
+                archive-list)
                (let ((n (symbol-name name))
                      (pkg (buffer-string)))
                  (with-temp-file
                      (format "%s%s-%s.tar" dest n version)
                    (insert pkg)))))
-      (package-download-transaction
-       (elpakit/archive-list->elpa-list archive-list))
-      new-archive-list)))
+      (package-download-transaction package-list)
+      archive-list)))
 
 (defvar elpakit-make-full-archive t
   "Set to `t' to get the archive resolution stuff working.")
