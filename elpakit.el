@@ -620,7 +620,7 @@ packages.."
   (->> (--map
         (-map (lambda (x) (cons (car x) (apply 'vector (cadr x))))
               (elt (cdr it) 1)) ; pull the depend spec
-        (cdr archive-list))
+        archive-list)
     (-flatten)
     (--sort (string-lessp
              (symbol-name (car it))
