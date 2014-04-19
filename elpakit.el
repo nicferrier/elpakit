@@ -642,15 +642,17 @@ packages added to it."
         (package-list (elpakit/archive-list->elpa-list archive-list)))
     (noflet ((package-unpack-single (name version desc requires)
                (push
-                (assq (intern name) package-archive-contents)
+                (assq (if (symbolp name) name (intern name))
+                      package-archive-contents)
                 archive-list)
                (let ((pkg (buffer-string)))
                  (with-temp-file
                      (format "%s%s-%s.el" dest name version)
                    (insert pkg))))
-             (package-download-tar (name version)
+             (package-unpack (name version)
                (push
-                (assq (intern name) package-archive-contents)
+                (assq (if (symbolp name) name (intern name))
+                      package-archive-contents)
                 archive-list)
                (let ((n (symbol-name name))
                      (pkg (buffer-string)))
