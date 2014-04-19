@@ -659,6 +659,7 @@ packages added to it."
                  (with-temp-file
                      (format "%s%s-%s.tar" dest n version)
                    (insert pkg)))))
+      ;; FIXME - do caching here?
       (package-download-transaction package-list)
       archive-list)))
 
