@@ -510,7 +510,7 @@ to do everything inside a single emacs.
 
 Elpakit will also let you make a package from your currently installed
 ELPA packages. This is useful if you want to share a lot of
-dependancies with friends or colleagues.
+dependencies with friends or colleagues.
 
 {{{
 M-x elpakit-package-list-buf
