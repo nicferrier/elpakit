@@ -1,11 +1,12 @@
 = A package and archive builder =
 
-Elpakit is a collection of tools for building packages and archives of
-packages. This is useful for managing small sets of
-under-development-packages that may be related.
+Elpakit is a bunch of tools for authoring Emacs ELPA packages.
 
-It's also useful as a build tool for multi-file packages and for
-expressing some testing details.
+* Elpakit makes package-archives for you 
+* Elpakit builds multi-file packages or single file packages
+* Elpakit runs tests on packages in isolated Emacs processes
+* Elpakit runs occur on package symbols for you
+
 
 An example:
 
@@ -18,9 +19,12 @@ An example:
        "~/work/rcirc-ssh"))
 }}}
 
-This should make a package archive in /tmp/shoesoffsaas which has the
-4 packages in it, it will //build// those packages first if they need
-to be built (building only really means something for tar packages).
+Elpakit will make a package archive in "/tmp/shoesoffsaas". It will
+have an //archive-contents// formatted correctly. It will have
+packages made from the listed directories but also any packages that
+those packages depend on will be downloaded from the rest of your
+package archives.
+
 
 == Status ==
 
