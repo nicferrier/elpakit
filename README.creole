@@ -290,14 +290,10 @@ but I suggest:
 (define-key emacs-lisp-mode-map (kbd "M-o") 'elpakit-multi-occur)
 }}}
 
-== Notes on the differences with MELPA ==
+== Notes on the differences with MELPA and Cask ==
 
-I hope to merge much of this with MELPA. The MELPA guys are cool, I
-think it will be doable.
-
-MELPA's code was not portable enough for me, quickly enough, to do
-what I needed. So I have duplicated lots of functionality. Hopefully
-we can de-duplicate in the future.
+I once hoped to merge elpakit with MELPA and Cask but it doesn't seem
+possible. So I build elpakit purely for my own ends these days.
 
 The MELPA recipe standard has no:
 
@@ -307,7 +303,7 @@ The MELPA recipe standard has no:
 * or {{{test}}} sections
 
 as far as I can see. These have been added to elpakit to make the task
-of building tar files possible.
+of building tar files possible without having to build the {{{-pkg.el}}} file.
 
 MELPA doesn't even need the version since it pulls it from the GIT
 commit?
