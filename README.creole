@@ -320,6 +320,13 @@ to.
 I don't know how to solve this problem, maybe the MELPA guys could
 switch their code to autodetect repository provided recipes somehow?
 
+Elpakit covers pretty much the same ground as Cask. The Cask program
+uses an external binary though while elpakit is just elisp. Elpakit
+also uses file based package archives quite a lot, while Cask seems to
+prefer HTTP. This requires an HTTP server which I don't think is a
+necessary step at all.
+
+
 == Useful tips ==
 
 There are a bunch of useful things you can do if you're building apps
