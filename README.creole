@@ -396,6 +396,29 @@ a directory to Emacs. That means you can use TRAMP:
 This is useful for deploying packages to remote locations, for example
 "live" in an [[http://elnode.org|elnode]] app.
 
+=== Copyable elpakits ===
+
+An alternative to the //push to remote// elpakit is building it
+locally and having the remote pull it. This is possible too,
+especially with a bit of elnode magic.
+
+{{{
+(elpakit "/tmp/my-archive"
+   '("~/work/elnode-auth"
+     "~/work/emacs-db"
+     "~/work/shoes-off"))
+(elnode-make-webserver "/tmp/my-archive" :port 8007 :host "0.0.0.0")
+}}}
+
+and on the remote use:
+
+{{{
+wget -r -np http://elnode-server:8007
+}}}
+
+to get the package archive built by elpakit.
+
+
 === Defining kits to be reusable ===
 
 Just collecting the list of package directories into a list means you
