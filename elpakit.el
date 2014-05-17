@@ -646,10 +646,11 @@ packages added to it."
   (let ((dest (file-name-as-directory download-dir))
         (package-list (elpakit/archive-list->elpa-list archive-list)))
     (noflet ((package-unpack-single (name version desc requires)
-               (push
-                (assq (if (symbolp name) name (intern name))
-                      package-archive-contents)
-                archive-list)
+               (let* ((pkg (assq (if (symbolp name) name (intern name))
+                                 package-archive-contents))
+                      (pkg-name (car pkg))
+                      (pkg-details (cdr pkg)))
+                 (push (cons pkg-name (subseq pkg-details 0 -1)) archive-list))
                (let ((pkg (buffer-string)))
                  (with-temp-file
                      (format "%s%s-%s.el" dest name version)
