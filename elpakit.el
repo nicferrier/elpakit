@@ -313,6 +313,10 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
       (version-to-list (cadr elt))))
    require-list))
 
+(defun elpakit/strip-file-local-vars (header-line-string)
+  "Strip any file local variables from HEADER-LINE-STRING."
+  (replace-regexp-in-string "-\\*- .* -\\*-" "" header-line-string))
+
 (defun elpakit/recipe->pkg-info (recipe)
   "Convert the RECIPE to a package info vector."
   (let* ((package-decl 
@@ -320,7 +324,7 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
            (format "%S" (elpakit/recipe->package-decl recipe))))
          (name (nth 1 package-decl))
          (version (nth 2 package-decl))
-         (docstring (nth 3 package-decl))
+         (docstring (elpakit/strip-file-local-vars (nth 3 package-decl)))
          (require-list (nth 4 package-decl))
          (requires (elpakit/require-versionify require-list))
          (readme (elpakit/readme recipe))
@@ -606,7 +610,7 @@ test-package cons."
         (intern (elt package 0)) ; name
         (vector (version-to-list (elt package 3)) ; version list
                 (elt package 1) ; requirements
-                (elt package 2) ; doc string
+                (elpakit/strip-file-local-vars (elt package 2)) ; docstring
                 type))))
 
 (defun elpakit/archive-list->elpa-list (archive-list)
