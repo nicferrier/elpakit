@@ -622,8 +622,9 @@ that are specified in the archive list.
 We use this function to resolve the missing depends from test
 packages.."
   (->> (--map
-        (-map (lambda (x) (cons (car x) (apply 'vector (cadr x))))
-              (elt (cdr it) 1)) ; pull the depend spec
+        (-map
+         (lambda (x) (cons (car x) (apply 'vector (cadr x))))
+         (elt (cdr it) 1)) ; pull the depend spec
         archive-list)
     (-flatten)
     (--sort (string-lessp
