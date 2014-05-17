@@ -650,6 +650,7 @@ packages added to it."
                                  package-archive-contents))
                       (pkg-name (car pkg))
                       (pkg-details (cdr pkg)))
+                 ;; The package has the archive source on the end so we strip that off
                  (push (cons pkg-name (subseq pkg-details 0 -1)) archive-list))
                (let ((pkg (buffer-string)))
                  (with-temp-file
