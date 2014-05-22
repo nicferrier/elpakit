@@ -222,6 +222,22 @@ The list is returned sorted and with absolute files."
   ;;(message "elpakit/copy %s to %s" source dest)
   (copy-file source dest))
 
+
+(defun elpakit/package-access (package slot)
+  "Do some emacs package API hiding."
+  (if (listp package)
+      (case slot
+        (:version (elt package 3))
+        (:reqs (elt package 1))
+        (:name (intern (elt package 0)))
+        (t package))
+      ;; Else
+      (case slot
+        (:version (package-desc-version package))
+        (:reqs (package-desc-reqs package))
+        (:name (package-desc-name package))
+        (t package))))
+
 (defun elpakit/file->package (file &rest selector)
   "Convert FILE to package-info.
 
@@ -234,13 +250,10 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
       (if selector
           (loop for select in selector
              collect
-               (case select
-                 (:version (elt package-info 3))
-                 (:requires (elt package-info 1))
-                 (:name (intern (elt package-info 0)))
-                 (t package-info)))
+               (elpakit/package-access package-info select))
           ;; Else
           package-info))))
+
 
 (defun elpakit/build-single (destination single-file &optional recipe)
   "Build a single file package into DESTINATION."
@@ -643,8 +656,10 @@ DOWNLOAD-DIR.
 
 A new copy of `archive-list' is returned with all the additional
 packages added to it."
-  (let ((dest (file-name-as-directory download-dir))
-        (package-list (elpakit/archive-list->elpa-list archive-list)))
+  (let* ((dest (file-name-as-directory download-dir))
+         (elpakit-requests (mapcar 'car archive-list))
+         (package-depends (elpakit/archive-list->elpa-list archive-list))
+         (package-list (--filter (not (memq it elpakit-requests)) package-depends)))
     (noflet ((package-unpack-single (name version desc requires)
                (let* ((pkg (assq (if (symbolp name) name (intern name))
                                  package-archive-contents))
