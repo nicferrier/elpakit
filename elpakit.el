@@ -222,7 +222,6 @@ The list is returned sorted and with absolute files."
   ;;(message "elpakit/copy %s to %s" source dest)
   (copy-file source dest))
 
-
 (defun elpakit/package-access (package slot)
   "Do some emacs package API hiding."
   (if (listp package)
