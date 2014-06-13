@@ -7,7 +7,7 @@
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
 ;; Package-Requires: ((anaphora "0.0.6")(dash "2.3.0"))
-;; Version: 1.0.9
+;; Version: 1.1.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -514,6 +514,7 @@ Opens the directory the package has been built in."
          (with-current-buffer
              (find-file-noselect
               (expand-file-name file package-dir))
+           (message "elpakit/do-eval %s - %s" package-dir file)
            (condition-case err
                (eval-buffer)
              (file-error
@@ -612,7 +613,9 @@ test-package cons."
                   'read-expression-history)))
       (if (symbolp form) (symbol-value form) form))))
   (loop for package in package-list
-     do (elpakit/do-eval package)))
+     do
+       (message "elpakit-eval (%S) - %s" package-list package)
+       (elpakit/do-eval package)))
 
 (defun elpakit/packages-list->archive-list (packages-list)
   "Turn the list of packages into an archive list."
