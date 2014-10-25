@@ -1,0 +1,18 @@
+* postgresql driver
+** use the marsden library
+** [[~/work/emacs-postgres/pg.el]]
+** async plan
+*** writes
+**** have a hashtable db but then send writes async to pg
+**** when they come back you can mark the original row as stored in pg
+**** if it doesn't ever write it's because the db is down
+***** and you can start really really alerting
+*** reads are the problem
+**** because of course stuff can change in the db but not the local db
+** how does it work
+*** we need lazy connection establishment
+**** connection tied to a db
+**** possibly a connection pool
+*** db-get
+**** find or make a connection
+**** 
