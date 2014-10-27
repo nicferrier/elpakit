@@ -93,7 +93,7 @@ the source tree."
   `(if (version<=
         "24.4"
         (package-version-join
-         (list emacs-major-version emacs-minor-version))) ; (eq (elt ,package 0) 'cl-struct-package)
+         (list emacs-major-version emacs-minor-version)))
        ,consequent
        ;; Else
        ,@alternate))
