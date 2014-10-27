@@ -599,7 +599,8 @@ Opens the directory the package has been built in."
 (defun elpakit/do-eval (package-dir)
   "Just eval the elisp files in the package in PACKAGE-DIR."
   (assert (file-directory-p package-dir))
-  (let* ((files (elpakit/package-files (elpakit/get-recipe package-dir)))
+  (let* ((recipe (elpakit/get-recipe package-dir))
+         (files (elpakit/package-files recipe))
          (elisp (elpakit/files-to-elisp files)))
     (loop for file in elisp
        do
