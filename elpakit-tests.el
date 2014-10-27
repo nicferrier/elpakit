@@ -145,6 +145,18 @@
          (creole "0.8.14")))
       (elpakit/recipe->package-decl recipe)))))
 
+(defun elpakit-test/tar-ls (tar-file)
+  "Files in the TAR-FILE to a list."
+  (--filter
+   (not (equal it ""))
+   (--map
+    (replace-regexp-in-string ".*/\\([^/]*\\)" "\\1" it)
+    (split-string
+     (shell-command-to-string
+      (concat
+       "tar tf " tar-file))
+     "\n"))))
+
 (ert-deftest elpakit/build-multi ()
   (condition-case nil
       (delete-directory "/tmp/elpakittest" t)
