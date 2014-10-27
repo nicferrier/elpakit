@@ -170,7 +170,7 @@ Returns a plist with `:elisp-files', `:test-files',
         ((equal (file-name-extension it) "el")
          (push it elisp-files)
          (push (elpakit/absolutize-file-name package-dir it) non-test-elisp))
-        ((and (not (member it '(".git" ".gitignore"))))
+        ((and (not (string-match-p "^\\..*" it)))
          (push it other-files))))
     (list :elisp-files elisp-files
           :test-files test-files
