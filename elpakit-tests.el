@@ -151,7 +151,7 @@
     (error nil))
   (should
    (equal
-    ["elnode"
+    '("elnode"
      ((web (0 4 3))
       (dash (1 1 0))
       (noflet (0 0 7))
@@ -160,17 +160,12 @@
       (fakir (0 1 6))
       (db (0 0 5))
       (kv (0 0 17)))
-     "The Emacs webserver." "0.9.9.8.7"]
+     "The Emacs webserver."
+      "0.9.9.8.7")
     ;; Return the package info WITHOUT the README
-    (with-elpakit-new-package-api
-      (apply
-       'vector
-       (elpakit/package-info
-        (elpakit/build-multi "/tmp/elpakittest" (elpakit/get-recipe "elnode-auth"))
-        :name :reqs :summary :version))
-      (subseq
-       (elpakit/build-multi "/tmp/elpakittest" (elpakit/get-recipe "elnode-auth"))
-       0 4))))
+    (elpakit/package-info
+     (elpakit/build-multi "/tmp/elpakittest" (elpakit/get-recipe "elnode-auth"))
+     :name :reqs :summary :version)))
   ;; Test the interveening files
   (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode.el"))
   (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode-pkg.el"))
@@ -181,26 +176,21 @@
   ;; Test the do for a multi-file package
   (should
    (equal
-    ["elnode"
-     ((web (0 4 3))
-      (dash (1 1 0))
-      (noflet (0 0 7))
-      (s (1 5 0))
-      (creole (0 8 14))
-      (fakir (0 1 6))
-      (db (0 0 5))
-      (kv (0 0 17)))
-     "The Emacs webserver."
-     "0.9.9.8.7"]
+    '("elnode"
+      ((web (0 4 3))
+       (dash (1 1 0))
+       (noflet (0 0 7))
+       (s (1 5 0))
+       (creole (0 8 14))
+       (fakir (0 1 6))
+       (db (0 0 5))
+       (kv (0 0 17)))
+      "The Emacs webserver."
+      "0.9.9.8.7")
     ;; Return the package info WITHOUT the README
-    (with-elpakit-new-package-api
-        (apply 'vector
-               (elpakit/package-info
-                (cdar (elpakit/do "/tmp/elpakittest" "elnode-auth"))
-                :name :reqs :summary :version))
-        (subseq
-         (cdar (elpakit/do "/tmp/elpakittest" "~/work/elnode-auth"))
-         0 4)))))
+    (elpakit/package-info
+     (cdar (elpakit/do "/tmp/elpakittest" "elnode-auth"))
+     :name :reqs :summary :version))))
 
 (ert-deftest elpakit/recipe->pkg-info ()
   "Test turning recipe into the internal vector package type."
@@ -224,23 +214,18 @@
                       (creole "0.8.14")))))
     (should
      (equal
-      ["elnode"
-       ((web (0 1 4))
-        (db (0 0 1))
-        (kv (0 0 9))
-        (fakir (0 0 14))
-        (creole (0 8 14)))
-       "The Emacs webserver."
-       "0.9.9.1"]
+      '("elnode"
+        ((web (0 1 4))
+         (db (0 0 1))
+         (kv (0 0 9))
+         (fakir (0 0 14))
+         (creole (0 8 14)))
+        "The Emacs webserver."
+        "0.9.9.1")
       ;; We do take off the README
-      (with-elpakit-new-package-api
-        (apply 'vector
-               (elpakit/package-info
-                (elpakit/recipe->pkg-info recipe)
-                :name :reqs :summary :version))
-        (subseq 
-         (elpakit/recipe->pkg-info recipe)
-         0 4))))))
+      (elpakit/package-info
+       (elpakit/recipe->pkg-info recipe)
+       :name :reqs :summary :version)))))
 
 (ert-deftest elpakit/pjg-info->versioned-name ()
   "Test turning recipe into the internal vector package type."
