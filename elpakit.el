@@ -584,8 +584,8 @@ Opens the directory the package has been built in."
           (if (file-directory-p dest-dir)
               dest-dir
               (make-temp-file package-name dir-flag "elpakit")))
-         (package-info (elpakit/build-multi
-                        dest (elpakit/get-recipe directory))))
+         (package-info
+          (elpakit/build-multi dest (elpakit/get-recipe directory))))
     ;; Check whether we should do melpa branch management
     (when (and
            (file-directory-p (concat directory ".git"))
