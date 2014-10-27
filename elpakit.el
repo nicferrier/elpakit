@@ -6,8 +6,8 @@
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
-;; Package-Requires: ((anaphora "0.0.6")(dash "2.3.0"))
-;; Version: 1.1.1
+;; Package-Requires: ((anaphora "0.0.6")(dash "2.9.0")(shadcen "1.3")(s "1.9.0"))
+;; Version: 2.0.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -47,6 +47,8 @@
 (require 'package)
 (require 'dash)
 (require 'cl)
+(require 's)
+(require 'shadchen)
 (require 'anaphora)
 (require 'tabulated-list)
 (require 'server)
@@ -83,7 +85,46 @@ the source tree."
   (expand-file-name
    (concat (file-name-as-directory package-dir) file-name)))
 
-(defun elpakit/infer-files (package-dir)
+
+(defmacro with-elpakit-new-package-api (consequent &rest alternate)
+  "Abstract the package API."
+  (declare (debug (form &rest form))
+           (indent 0))
+  `(if (version<=
+        "24.4"
+        (package-version-join
+         (list emacs-major-version emacs-minor-version))) ; (eq (elt ,package 0) 'cl-struct-package)
+       ,consequent
+       ;; Else
+       ,@alternate))
+
+(defun elpakit/package-info (package-info &rest selector)
+  (with-elpakit-new-package-api
+    (if selector
+        (--map
+         (case it
+           (:version (package-version-join (package-desc-version package-info)))
+           (:name (let ((name (package-desc-name package-info)))
+                    (if (symbolp name) (symbol-name name) name)))
+           (:summary (package-desc-summary package-info))
+           (:reqs (package-desc-reqs package-info))
+           (t package-info))
+         selector)
+        ;; Else we just want the package
+        package-info)
+        (if selector
+            (--map
+             (case it
+               (:version (elt package-info 3))
+               (:summary (elt package-info 2))
+               (:reqs (elt package-info 1))
+               (:name (elt package-info 0))
+               (t package-info))
+             selector)
+            ;; Else
+            package-info)))
+
+(defun elpakit/infer-files-old (package-dir)
   "Infer the important files from PACKAGE-DIR
 
 Returns a plist with `:elisp-files', `:test-files' and
@@ -104,6 +145,38 @@ Returns a plist with `:elisp-files', `:test-files' and
      :test-files test-files
      :non-test-elisp non-test-elisp)))
 
+(defun elpakit/git-files (package-dir)
+  (let ((default-directory
+         (expand-file-name
+          (file-name-as-directory package-dir))))
+    (split-string (shell-command-to-string "git ls-files"))))
+
+(defun elpakit/infer-files (package-dir)
+  "Infer the important files from PACKAGE-DIR
+
+Returns a plist with `:elisp-files', `:test-files',
+`:other-files' and `:non-test-elisp' filename lists.
+
+`:non-test-elisp' is absolutized, but the others are not."
+  (let* (non-test-elisp
+         elisp-files
+         test-files
+         other-files)
+    (--each (elpakit/git-files package-dir)
+      (cond
+        ((string-match-p "\\(test\\(s\\)*.el\\)\\|\\(.*-test\\(s\\)*.el\\)$" it)
+         (push it elisp-files)
+         (push it test-files))
+        ((equal (file-name-extension it) "el")
+         (push it elisp-files)
+         (push (elpakit/absolutize-file-name package-dir it) non-test-elisp))
+        ((and (not (member it '(".git" ".gitignore"))))
+         (push it other-files))))
+    (list :elisp-files elisp-files
+          :test-files test-files
+          :non-test-elisp non-test-elisp
+          :other-files other-files)))
+
 (defun elpakit/infer-recipe (package-dir)
   "Infer a recipe from the PACKAGE-DIR.
 
@@ -115,35 +188,61 @@ Test package files are guessed at to produce the :test section of
 the recipe.
 
 Files mentioned in the recipe are all absolute file names."
-  (destructuring-bind (&key elisp-files test-files non-test-elisp)
-      (elpakit/infer-files package-dir)
+  (match-let
+      (((plist :elisp-files elisp-files
+               :test-files test-files
+               :non-test-elisp non-test-elisp
+               :other-files other-files)
+        (elpakit/infer-files package-dir)))
     ;; Now choose what sort of recipe to build?
     (if (equal (length non-test-elisp) 1)
         (let ((name (car (elpakit/file->package (car non-test-elisp) :name))))
           ;; Return the recipe with optional test section
-          (list* ;; FIXME replace this with dash's -cons*
-           name :files non-test-elisp
+          (list* ; FIXME replace this with dash's -cons*
+           name
+           :files non-test-elisp
            (when test-files
              (list :test
                    (list
                     :files
-                    (mapcar
-                     (lambda (f)
-                       (elpakit/absolutize-file-name package-dir f))
-                     test-files))))))
-        ;; Can't infer a multi-file package right now.
-        ;;
-        ;; FIXME - we could infer a lot about what to put in a
-        ;; package:
-        ;;
-        ;; ** multiple, non-test lisp files could just be packaged
-        ;; ** include any README and licence file
-        ;; ** include any dir file and info files?
-        ;;
-        ;; the blocker is where to get the :version and :requires from.
-        (error
-         "elpakit - cannot infer package for %s - add a recipe description"
-         package-dir))))
+                    (--map
+                      (elpakit/absolutize-file-name package-dir it)
+                      test-files))))))
+        ;; Else we have a multi-file package... try and find the
+        ;; package-info in an elisp-file
+        (let ((info
+               (car-safe
+                (--keep
+                 (condition-case err
+                     (with-temp-buffer
+                       (insert-file-contents it)
+                       (emacs-lisp-mode)
+                       (package-buffer-info))
+                   (error nil))
+                 elisp-files))))
+          (if (not info)
+              (error
+               "elpakit - cannot infer package for %s - add a recipe description"
+               package-dir)
+              ;; Else try and construct the package
+              ;;(list (car info))
+              (list*
+               (package-desc-name info)
+               :version (package-version-join (package-desc-version info))
+               :doc (package-desc-summary info)
+               :files
+               (append
+                non-test-elisp
+                (--map
+                 (elpakit/absolutize-file-name package-dir it)
+                 other-files))
+               (when test-files
+                 (let ((full
+                        (--map
+                         (elpakit/absolutize-file-name
+                          package-dir it)
+                         test-files)))
+                   (list :test (list :files full))))))))))
 
 (defun elpakit/get-recipe (package-dir)
   "Returns the recipe for the PACKAGE-DIR.
@@ -191,27 +290,22 @@ The list is returned sorted and with absolute files."
 
 (defun elpakit/make-pkg-lisp (dest-dir pkg-info)
   "Write the package declaration lisp for PKG-INFO into DEST-DIR."
-  ;; This is ripped out of melpa pb/write-pkg-file
-  (let* ((name (aref pkg-info 0))
-         (filename (concat
-                    (file-name-as-directory dest-dir)
-                    (format "%s-pkg.el" name)))
-         (lisp
-          `(define-package ; add the URL to extra-properties
-               ,name
-               ,(aref pkg-info 3)
-             ,(aref pkg-info 2)
-             ',(mapcar
-                (lambda (elt)
-                  (list (car elt)
-                        (package-version-join (cadr elt))))
-                (aref pkg-info 1)))))
-    (with-current-buffer
-        (let (find-file-hook)
-          (find-file-noselect filename))
-      (erase-buffer)
-      (insert (format "%S" lisp))
-      (write-file filename))))
+  (match-let (((list name reqs summary version)
+               (elpakit/package-info pkg-info :name :reqs :summary :version)))
+    (let* ((filename (concat
+                      (file-name-as-directory dest-dir)
+                      (format "%s-pkg.el" name)))
+           (lisp
+            `(define-package ; add the URL to extra-properties
+                 ,name ,version ,summary
+                 (quote ,(--map
+                          (cons
+                           (car it)
+                           (list
+                            (package-version-join (cadr it)))) reqs)))))
+      (with-temp-buffer
+        (insert (format "%S" lisp))
+        (write-file filename)))))
 
 (defun elpakit/copy (source dest)
   "Copy the file."
@@ -222,21 +316,6 @@ The list is returned sorted and with absolute files."
   ;;(message "elpakit/copy %s to %s" source dest)
   (copy-file source dest))
 
-(defun elpakit/package-access (package slot)
-  "Do some emacs package API hiding."
-  (if (listp package)
-      (case slot
-        (:version (elt package 3))
-        (:reqs (elt package 1))
-        (:name (intern (elt package 0)))
-        (t package))
-      ;; Else
-      (case slot
-        (:version (package-desc-version package))
-        (:reqs (package-desc-reqs package))
-        (:name (package-desc-name package))
-        (t package))))
-
 (defun elpakit/file->package (file &rest selector)
   "Convert FILE to package-info.
 
@@ -246,16 +325,17 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
     (let* ((package-info
             (save-excursion
               (package-buffer-info))))
-      (if selector
-          (loop for select in selector
-             collect
-               (elpakit/package-access package-info select))
-          ;; Else
-          package-info))))
+      (apply 'elpakit/package-info package-info selector))))
 
 
 (defun elpakit/build-single (destination single-file &optional recipe)
-  "Build a single file package into DESTINATION."
+  "Build a single file package into DESTINATION.
+
+The package is built as a directory of:
+
+  package-name-version
+
+with the package file inside."
   (destructuring-bind
         (package-info name version)
       (condition-case nil
@@ -274,16 +354,19 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
                       "") ; commentary
                     package-name
                     version)))))
-    (unless (file-exists-p destination)
-      (make-directory destination t))
-    ;; Copy the actual lisp file
-    (elpakit/copy
-     single-file
-     (concat
-      (file-name-as-directory destination)
-      (format "%s-%s" name version) ".el"))
-    ;; Return the info
-    package-info))
+    (let* ((filename
+            (s-format "${dir}${name}-${version}/${name}.el"
+                      'aget
+                      `(("dir" . ,(file-name-as-directory destination))
+                        ("name" . ,name)
+                        ("version" . ,version))))
+           (dest (file-name-directory filename)))
+      (unless (file-exists-p dest)
+        (make-directory dest t))
+      ;; Copy the actual lisp file
+      (elpakit/copy single-file filename)
+      ;; Return the info
+      package-info)))
 
 (defun elpakit/recipe->package-decl (recipe)
   "Convert a recipe into a package declaration."
@@ -333,22 +416,31 @@ Optionaly get a list of SELECTOR which is `:version', `:name',
   "Convert the RECIPE to a package info vector."
   (let* ((package-decl 
           (package-read-from-string
-           (format "%S" (elpakit/recipe->package-decl recipe))))
-         (name (nth 1 package-decl))
-         (version (nth 2 package-decl))
-         (docstring (elpakit/strip-file-local-vars (nth 3 package-decl)))
-         (require-list (nth 4 package-decl))
-         (requires (elpakit/require-versionify require-list))
-         (readme (elpakit/readme recipe))
-         (package-info
-          (vector name requires docstring version readme)))
-    package-info))
+           (format "%S" (elpakit/recipe->package-decl recipe)))))
+    (with-elpakit-new-package-api
+      (package-desc-create
+       :name (intern (nth 1 package-decl))
+       :version (version-to-list (nth 2 package-decl))
+       :summary (elpakit/strip-file-local-vars (nth 3 package-decl))
+       :reqs (elpakit/require-versionify (nth 4 package-decl)))
+      ;; Else
+      (let* ((name (nth 1 package-decl))
+             (version (nth 2 package-decl))
+             (docstring (elpakit/strip-file-local-vars (nth 3 package-decl)))
+             (require-list (nth 4 package-decl))
+             (requires (elpakit/require-versionify require-list))
+             (readme (elpakit/readme recipe))
+             (package-info
+              (vector name requires docstring version readme)))
+        package-info))))
 
 (defun elpakit/pkg-info->versioned-name (pkg-info)
-  "Make the versioned package name from the PKG-INFO vector."
-  (destructuring-bind
-        (name requires docstring version readme)
-      (mapcar 'identity pkg-info)
+  "Make the versioned package name from the PKG-INFO vector.
+
+Returns eg: `package-name-1.0.0'."
+  (match-let
+      (((list name requires docstring version)
+        (elpakit/package-info pkg-info :name :reqs :summary :version)))
     (format "%s-%s" name version)))
 
 

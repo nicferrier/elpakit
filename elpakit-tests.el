@@ -1,6 +1,8 @@
-;;; Tests for elpakit
+;;; Tests for elpakit -*- lexical-binding: t -*-
 
 (require 'ert)
+(require 'shadchen)
+(require 'noflet)
 
 (ert-deftest elpakit/mematch ()
   (should
@@ -15,43 +17,82 @@
     (list "some.el" "files.txt"))))
 
 (ert-deftest elpakit/find-recipe ()
+  "Test whether we can find a recipt file of not"
   (should
    (equal
-    "/home/nferrier/work/emacs-db/recipes/db"
-    (elpakit/find-recipe "~/work/emacs-db"))))
+    (concat
+     (file-name-directory
+      (or
+       (buffer-file-name)
+       load-file-name
+       default-directory))
+     "emacs-kv/recipes/kv")
+    (elpakit/find-recipe "emacs-kv"))))
+
+(ert-deftest elpakit/infer-files ()
+  "Test the file inferring."
+  (should
+   (noflet ((elpakit/git-files (package-dir) ; fake the git-files for the fake package
+              (directory-files "emacs-db" nil "^[^.#].*[^#~]$")))
+     (equal
+       (match
+         (elpakit/infer-files "emacs-db")
+         ((plist :elisp-files elisp :test-files tests)
+          (list elisp tests)))
+       '(("db.el" "db-tests.el")
+         ("db-tests.el"))))))
+
+(ert-deftest elpakit/file->package ()
+  "Test turning a file into a package and the access API."
+  ;; This is really fucking difficult to test with the different emacs versions.
+  (should
+   (with-elpakit-new-package-api 
+     (package-desc-p (elpakit/file->package "db.el"))
+     (vectorp (elpakit/file->package "db.el"))))
+  ;; This should always be the same - pull a bunch of things
+  (should
+   (equal
+    '("0.0.6" "db")
+    (elpakit/file->package "db.el" :version :name))))
 
 (ert-deftest elpakit/package-files ()
   (should
    (equal
-    '("/home/nferrier/work/emacs-db/db.el")
+    (list (concat
+           (file-name-directory
+            (or
+             (buffer-file-name)
+             load-file-name
+             default-directory)) "emacs-db/db.el"))
     (elpakit/package-files
-     (elpakit/get-recipe "~/work/emacs-db")))))
+     (elpakit/get-recipe "emacs-db")))))
 
 (ert-deftest elpakit/make-pkg-lisp ()
   (condition-case nil
-      (delete-directory "/tmp/elpakittest/db-0.0.1" t)
+      (delete-directory "/tmp/elpakittest/db-0.0.6" t)
     (error nil))
-  (make-directory "/tmp/elpakittest/db-0.0.1" t)
-  (with-current-buffer (find-file-noselect "~/work/emacs-db/db.el")
+  (make-directory "/tmp/elpakittest/db-0.0.6" t)
+  (with-temp-buffer
+    (insert-file-contents "emacs-db/db.el")
     (elpakit/make-pkg-lisp
-     "/tmp/elpakittest/db-0.0.1"
+     "/tmp/elpakittest/db-0.0.6"
      (save-excursion (package-buffer-info))))
   (should
    (equal
-    (concat "(define-package \"db\" \"0.0.1\" "
-            "\"A database for EmacsLisp\" (quote ((kv \"0.0.9\"))))\n")
-    (with-current-buffer
-        (find-file-noselect "/tmp/elpakittest/db-0.0.1/db-pkg.el")
+    (concat "(define-package \"db\" \"0.0.6\" "
+            "\"A database for EmacsLisp\" (quote ((kv \"0.0.11\"))))\n")
+    (with-temp-buffer
+      (insert-file-contents "/tmp/elpakittest/db-0.0.6/db-pkg.el")
       (buffer-substring-no-properties (point-min) (point-max))))))
 
 (ert-deftest elpakit/build-single ()
   (condition-case nil
       (delete-directory "/tmp/elpakittest" t)
     (error nil))
-  (elpakit/build-single "/tmp/elpakittest" "~/work/emacs-db/db.el")
+  (elpakit/build-single "/tmp/elpakittest" "emacs-db/db.el")
   ;;; (should (file-exists-p "/tmp/elpakittest/db-0.0.1/db-pkg.el"))
   ;;; (should (file-exists-p "/tmp/elpakittest/db-0.0.1/db-autoloads.el"))
-  (should (file-exists-p "/tmp/elpakittest/db-0.0.1/db.el")))
+  (should (file-exists-p "/tmp/elpakittest/db-0.0.6/db.el")))
 
 (ert-deftest elpakit/do ()
   "Test that we can do a single file package."
@@ -60,18 +101,17 @@
     (error nil))
   (should
    (equal
-    ["db"
-     ((kv (0 0 9)))
-     "A database for EmacsLisp"
-     "0.0.1"]
-    ;; Return the package info WITHOUT the README
-    (substring
-     (elpakit/do "/tmp/elpakittest" "~/work/emacs-db")
-     0 4)))
+    (elpakit/package-info
+     (cdr (car (elpakit/do "/tmp/elpakittest" "emacs-db")))
+     :name :reqs :summary :version)
+    `("db"
+      ((kv (0 0 11)))
+      "A database for EmacsLisp"
+      "0.0.6")))
   ;; Not doing either autoloads OR pkg files for singles now
   ;;; (should (file-exists-p "/tmp/elpakittest/db-0.0.1/db-autoloads.el"))
   ;;; (should (file-exists-p "/tmp/elpakittest/db-0.0.1/db-pkg.el"))
-  (should (file-exists-p "/tmp/elpakittest/db-0.0.1/db.el")))
+  (should (file-exists-p "/tmp/elpakittest/db-0.0.6/db.el")))
 
 (ert-deftest elpakit/recipe->package-decl ()
   (let ((recipe
@@ -112,41 +152,55 @@
   (should
    (equal
     ["elnode"
-     ((web (0 1 4))
-      (db (0 0 1))
-      (kv (0 0 9))
-      (fakir (0 0 14))
-      (creole (0 8 14)))
-     "The Emacs webserver."
-     "0.9.9.6.1"]
+     ((web (0 4 3))
+      (dash (1 1 0))
+      (noflet (0 0 7))
+      (s (1 5 0))
+      (creole (0 8 14))
+      (fakir (0 1 6))
+      (db (0 0 5))
+      (kv (0 0 17)))
+     "The Emacs webserver." "0.9.9.8.7"]
     ;; Return the package info WITHOUT the README
-    (substring
-     (elpakit/build-multi
-      "/tmp/elpakittest"
-      (elpakit/get-recipe 
-       "~/work/elnode-auth")) 0 4)))
+    (with-elpakit-new-package-api
+      (apply
+       'vector
+       (elpakit/package-info
+        (elpakit/build-multi "/tmp/elpakittest" (elpakit/get-recipe "elnode-auth"))
+        :name :reqs :summary :version))
+      (subseq
+       (elpakit/build-multi "/tmp/elpakittest" (elpakit/get-recipe "elnode-auth"))
+       0 4))))
   ;; Test the interveening files
-  (should (file-exists-p "/tmp/elnode-0.9.9.6.1/elnode.el"))
-  (should (file-exists-p "/tmp/elnode-0.9.9.6.1/elnode-pkg.el"))
+  (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode.el"))
+  (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode-pkg.el"))
   ;; Test the tar ball
-  (should (file-exists-p "/tmp/elpakittest/elnode-0.9.9.6.1.tar")))
+  (should (file-exists-p "/tmp/elpakittest/elnode-0.9.9.8.7.tar")))
 
 (ert-deftest elpakit/do-multi ()
   ;; Test the do for a multi-file package
   (should
    (equal
     ["elnode"
-     ((web (0 1 4))
-      (db (0 0 1))
-      (kv (0 0 9))
-      (fakir (0 0 14))
-      (creole (0 8 14)))
+     ((web (0 4 3))
+      (dash (1 1 0))
+      (noflet (0 0 7))
+      (s (1 5 0))
+      (creole (0 8 14))
+      (fakir (0 1 6))
+      (db (0 0 5))
+      (kv (0 0 17)))
      "The Emacs webserver."
-     "0.9.9.6.1"]
+     "0.9.9.8.7"]
     ;; Return the package info WITHOUT the README
-    (substring
-     (elpakit/do "/tmp/elpakittest" "~/work/elnode-auth")
-     0 4))))
+    (with-elpakit-new-package-api
+        (apply 'vector
+               (elpakit/package-info
+                (cdar (elpakit/do "/tmp/elpakittest" "elnode-auth"))
+                :name :reqs :summary :version))
+        (subseq
+         (cdar (elpakit/do "/tmp/elpakittest" "~/work/elnode-auth"))
+         0 4)))))
 
 (ert-deftest elpakit/recipe->pkg-info ()
   "Test turning recipe into the internal vector package type."
@@ -179,9 +233,14 @@
        "The Emacs webserver."
        "0.9.9.1"]
       ;; We do take off the README
-      (subseq 
-       (elpakit/recipe->pkg-info recipe)
-       0 4)))))
+      (with-elpakit-new-package-api
+        (apply 'vector
+               (elpakit/package-info
+                (elpakit/recipe->pkg-info recipe)
+                :name :reqs :summary :version))
+        (subseq 
+         (elpakit/recipe->pkg-info recipe)
+         0 4))))))
 
 (ert-deftest elpakit/pjg-info->versioned-name ()
   "Test turning recipe into the internal vector package type."
