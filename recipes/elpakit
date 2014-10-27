@@ -7,7 +7,8 @@
   (noflet "0.0.14")
   (s "1.9.0"))
  :files 
- ("elpakit.el")
+ ("elpakit.el"
+  "elpakit-run.el")
  :test
  (:files
   ("elpakit-tests.el")))
