@@ -471,7 +471,9 @@ In the final example there is no match with the MASK so we return
 (defun elpakit/build-multi (destination recipe)
   "Build a multi-file package into DESTINATION.
 
-RECIPE specifies the package in a plist s-expression form."
+RECIPE specifies the package in a plist s-expression form.
+
+The files should be tar'd and the tar placed into DESTINATION."
   (let* ((files (elpakit/package-files recipe))
          (base-files (elpakit/package-base-files recipe))
          (pkg-info (elpakit/recipe->pkg-info recipe))
