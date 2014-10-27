@@ -42,14 +42,43 @@
        '(("db.el" "db-tests.el")
          ("db-tests.el"))))))
 
+(defmacro elpakit-test/fake-git-files (package-dir &rest body)
+  "Used to fake `elpakit/git-files' around BODY."
+  (declare (indent 1))
+  `(noflet ((elpakit/git-files (package-dir)
+              (directory-files package-dir nil "^[^.#].*[^#~]$")))
+     ,@body))
+
+(ert-deftest elpakit/infer-recipe ()
+  "Show what an inferred recipe will look like."
+  ;; A single file package - easy to infer
+  (equal
+   (elpakit-test/fake-git-files "emacs-db" (elpakit/infer-recipe "emacs-db"))
+   '("db" :files ("db.el") :test (:files ("db-tests.el"))))
+  ;; A recipe we can't infer because there's no version
+  (equal
+   (condition-case err
+       (elpakit-test/fake-git-files "elnode-auth"
+         (elpakit/infer-recipe "elnode"))
+     (error :no-infer))
+   :no-infer)
+  ;; A multifile package we can infer because there's a file with version header
+  (equal
+   (elpakit-test/fake-git-files "demo-multifile"
+     (elpakit/infer-recipe "demo-multifile"))
+   '("demo-multifile"
+     :version "0.0.1"
+     :doc "a demonstration multifile package"
+     :files ("demo-multifile.el" "demo-2.el"))))
+
 (ert-deftest elpakit/file->package ()
   "Test turning a file into a package and the access API."
-  ;; This is really fucking difficult to test with the different emacs versions.
+  ;; First prove we have the right native type
   (should
    (with-elpakit-new-package-api 
      (package-desc-p (elpakit/file->package "db.el"))
      (vectorp (elpakit/file->package "db.el"))))
-  ;; This should always be the same - pull a bunch of things
+  ;; Then prove we've abstracted it
   (should
    (equal
     '("0.0.6" "db")
@@ -58,14 +87,8 @@
 (ert-deftest elpakit/package-files ()
   (should
    (equal
-    (list (concat
-           (file-name-directory
-            (or
-             (buffer-file-name)
-             load-file-name
-             default-directory)) "emacs-db/db.el"))
-    (elpakit/package-files
-     (elpakit/get-recipe "emacs-db")))))
+    (list (concat (ertx-this-package-dir) "emacs-db/db.el"))
+    (elpakit/package-files (elpakit/get-recipe "emacs-db")))))
 
 (ert-deftest elpakit/make-pkg-lisp ()
   (condition-case nil
@@ -158,6 +181,7 @@
      "\n"))))
 
 (ert-deftest elpakit/build-multi ()
+  "Build a multi file package from a recipe."
   (condition-case nil
       (delete-directory "/tmp/elpakittest" t)
     (error nil))
@@ -173,6 +197,29 @@
       (db (0 0 5))
       (kv (0 0 17)))
      "The Emacs webserver."
+      "0.9.9.8.7")
+    ;; Return the package info WITHOUT the README
+    (elpakit/package-info
+     (elpakit/build-multi "/tmp/elpakittest" (elpakit/get-recipe "elnode-auth"))
+     :name :reqs :summary :version)))
+  ;; Test the interveening files
+  (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode.el"))
+  (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode-pkg.el"))
+  ;; Test the tar ball
+  (should (file-exists-p "/tmp/elpakittest/elnode-0.9.9.8.7.tar"))
+  (should (member "elnode.el" (elpakit-test/tar-ls "/tmp/elpakittest/elnode-0.9.9.8.7.tar")))
+  (should (member "elnode-proxy.el" (elpakit-test/tar-ls "/tmp/elpakittest/elnode-0.9.9.8.7.tar"))))
+
+(ert-deftest elpakit/build-multi-inferred ()
+  "Build a multi file package from inference."
+  (condition-case nil
+      (delete-directory "/tmp/elpakittest" t)
+    (error nil))
+  (should
+   (equal
+    '("demo-multifile"
+      ()
+      "The Emacs webserver."
       "0.9.9.8.7")
     ;; Return the package info WITHOUT the README
     (elpakit/package-info

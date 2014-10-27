@@ -49,7 +49,6 @@
 (require 'cl)
 (require 's)
 (require 'shadchen)
-(require 'anaphora)
 (require 'tabulated-list)
 (require 'server)
 
@@ -162,14 +161,15 @@ Returns a plist with `:elisp-files', `:test-files',
          elisp-files
          test-files
          other-files)
-    (--each (elpakit/git-files package-dir)
+    (--each (or (elpakit/git-files package-dir)
+                (directory-files package-dir nil "^[^.]+.*[^~#]$"))
       (cond
         ((string-match-p "\\(test\\(s\\)*.el\\)\\|\\(.*-test\\(s\\)*.el\\)$" it)
          (push it elisp-files)
          (push it test-files))
         ((equal (file-name-extension it) "el")
          (push it elisp-files)
-         (push (elpakit/absolutize-file-name package-dir it) non-test-elisp))
+         (push it non-test-elisp))
         ((and (not (string-match-p "^\\..*" it)))
          (push it other-files))))
     (list :elisp-files elisp-files
@@ -202,12 +202,8 @@ Files mentioned in the recipe are all absolute file names."
            name
            :files non-test-elisp
            (when test-files
-             (list :test
-                   (list
-                    :files
-                    (--map
-                      (elpakit/absolutize-file-name package-dir it)
-                      test-files))))))
+             ;;  (--map (elpakit/absolutize-file-name package-dir it) test-files)
+             (list :test (list :files test-files)))))
         ;; Else we have a multi-file package... try and find the
         ;; package-info in an elisp-file
         (let ((info
@@ -215,7 +211,7 @@ Files mentioned in the recipe are all absolute file names."
                 (--keep
                  (condition-case err
                      (with-temp-buffer
-                       (insert-file-contents it)
+                       (insert-file-contents (expand-file-name it package-dir))
                        (emacs-lisp-mode)
                        (package-buffer-info))
                    (error nil))
@@ -227,22 +223,16 @@ Files mentioned in the recipe are all absolute file names."
               ;; Else try and construct the package
               ;;(list (car info))
               (list*
-               (package-desc-name info)
+               (symbol-name (package-desc-name info))
                :version (package-version-join (package-desc-version info))
                :doc (package-desc-summary info)
                :files
                (append
                 non-test-elisp
-                (--map
-                 (elpakit/absolutize-file-name package-dir it)
-                 other-files))
+                other-files) ; (--map (elpakit/absolutize-file-name package-dir it) other-files)
                (when test-files
-                 (let ((full
-                        (--map
-                         (elpakit/absolutize-file-name
-                          package-dir it)
-                         test-files)))
-                   (list :test (list :files full))))))))))
+                 ;; (let ((full (--map (elpakit/absolutize-file-name package-dir it) test-files))))
+                 (list :test (list :files test-files)))))))))
 
 (defun elpakit/get-recipe (package-dir)
   "Returns the recipe for the PACKAGE-DIR.
@@ -253,24 +243,28 @@ un-absoluted files.
 
 If the recipe is not found as a file then we infer it from the
 PACKAGE-DIR with `elpakit/infer-recipe'."
-  (if (elpakit/file-in-dir-p "recipes" package-dir)
-      (let* ((recipe-filename (elpakit/find-recipe package-dir))
-             (recipe (with-current-buffer (find-file-noselect recipe-filename)
-                       (goto-char (point-min))
-                       (read (current-buffer)))))
-        (plist-put (cdr recipe)
-                   :base-files
-                   (plist-get (cdr recipe) :files))
-        (plist-put (cdr recipe)
-                   :files
-                   (mapcar
-                    (lambda (f)
-                      (elpakit/absolutize-file-name
-                       package-dir f))
-                    (plist-get (cdr recipe) :files)))
-        recipe)
-      ;; Else infer it
-      (elpakit/infer-recipe package-dir)))
+  (let* ((recipe
+          (if (elpakit/file-in-dir-p "recipes" package-dir)
+              (let ((recipe-filename (elpakit/find-recipe package-dir)))
+                (with-temp-buffer
+                  (insert-file-contents recipe-filename)
+                  (goto-char (point-min))
+                  (read (current-buffer))))
+              ;; Else infer the recipe
+              (elpakit/infer-recipe package-dir))))
+    (plist-put
+     (cdr recipe)
+     :base-files
+     (plist-get (cdr recipe) :files))
+    (plist-put
+     (cdr recipe)
+     :files
+     (--map
+      (if (file-name-absolute-p it)
+          it
+          (elpakit/absolutize-file-name package-dir it))
+      (plist-get (cdr recipe) :files)))
+    recipe))
 
 (defun elpakit/package-files (recipe)
   "The list of files specified by the RECIPE.
@@ -370,19 +364,24 @@ with the package file inside."
 
 (defun elpakit/recipe->package-decl (recipe)
   "Convert a recipe into a package declaration."
-  (destructuring-bind (name
-                       ;; FIXME we need all the MELPA recipe things here
-                       &key
-                       version doc requires
-                       base-files files test) recipe
+  (match-let (((cons
+                name
+                (plist
+                 :version version
+                 :doc doc
+                 :requires requires
+                 :base-files base-files
+                 :files files
+                 :test test)) recipe))
     `(define-package
-         ,(symbol-name name)
+         ,(if (symbolp name) (symbol-name name) name)
          ,version
        ,(if (not (equal doc ""))
             doc
-            (aif (elpakit/mematch "README\\..*" files)
-                (with-current-buffer (find-file-noselect (car it))
-                  (buffer-substring-no-properties (point-min)(point-max)))
+            (let ((matched (elpakit/mematch "README\\..*" files)))
+              (when matched
+                (with-current-buffer (find-file-noselect (car matched))
+                  (buffer-substring-no-properties (point-min)(point-max))))
               "This package has no documentation."))
        ,requires)))
 
