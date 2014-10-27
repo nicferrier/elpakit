@@ -182,7 +182,9 @@
   (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode.el"))
   (should (file-exists-p "/tmp/elnode-0.9.9.8.7/elnode-pkg.el"))
   ;; Test the tar ball
-  (should (file-exists-p "/tmp/elpakittest/elnode-0.9.9.8.7.tar")))
+  (should (file-exists-p "/tmp/elpakittest/elnode-0.9.9.8.7.tar"))
+  (should (member "elnode.el" (elpakit-test/tar-ls "/tmp/elpakittest/elnode-0.9.9.8.7.tar")))
+  (should (member "elnode-proxy.el" (elpakit-test/tar-ls "/tmp/elpakittest/elnode-0.9.9.8.7.tar"))))
 
 (ert-deftest elpakit/do-multi ()
   ;; Test the do for a multi-file package
