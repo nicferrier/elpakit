@@ -6,8 +6,6 @@
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; URL: http://github.com/nicferrier/elpakit
 ;; Keywords: lisp
-;; Package-Requires: ((anaphora "0.0.6")(dash "2.9.0")(shadcen "1.3")(s "1.9.0"))
-;; Version: 2.0.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
