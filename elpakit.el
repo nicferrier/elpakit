@@ -30,15 +30,40 @@
 
 ;; An example:
 
-;; (elpakit
-;;  "/tmp/shoesoffsaas"
-;;  '("~/work/elnode-auth"
-;;    "~/work/emacs-db"
-;;    "~/work/shoes-off"
-;;    "~/work/rcirc-ssh"))
+;;  (elpakit
+;;   "/tmp/shoesoffsaas"
+;;   '("~/work/elnode-auth"
+;;     "~/work/emacs-db"
+;;     "~/work/shoes-off"
+;;     "~/work/rcirc-ssh"))
 
 ;; This should make a package archive in /tmp/shoesoffsaas which has
 ;; the 4 packages in it.
+
+;; Package building
+
+;; elpakit can also be used to build multi-package elpa packages, go
+;; to the directory containing the package source files and then:
+
+;;   M-x elpakit-make-multi
+
+;; will try and make a multi-file tar package in the current
+;; directory.
+
+;; elpakit will make a best effort with multi-file packages but it
+;; won't always get it right without direction. The right direction
+;; can be supplied in the form of a package recipe. Elpakit itself is
+;; a package that can only be built with a recipe.
+
+;; You can upload a multi-file package to marmalade or install it
+;; manually with:
+
+;;   M-x package-install-file
+
+;; elpakit can also be used to run tests on packages and do other
+;; things with packages. See the official README file for more
+;; information.
+
 
 ;;; Code:
 
