@@ -219,7 +219,9 @@ Files mentioned in the recipe are all absolute file names."
         (elpakit/infer-files package-dir)))
     ;; Now choose what sort of recipe to build?
     (if (equal (length non-test-elisp) 1)
-        (let ((name (car (elpakit/file->package (car non-test-elisp) :name))))
+        (let ((name (car (elpakit/file->package
+                          (expand-file-name (car non-test-elisp) package-dir)
+                          :name))))
           ;; Return the recipe with optional test section
           (list* ; FIXME replace this with dash's -cons*
            name
@@ -338,7 +340,9 @@ The list is returned sorted and with absolute files."
 
 Optionaly get a list of SELECTOR which is `:version', `:name',
 `:requires' or t for everything."
-  (with-current-buffer (find-file-noselect file)
+  (with-temp-buffer
+    (insert-file-contents file)
+    (emacs-lisp-mode)
     (let* ((package-info
             (save-excursion
               (package-buffer-info))))
