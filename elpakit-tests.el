@@ -71,6 +71,21 @@
      :doc "a demonstration multifile package"
      :files ("demo-multifile.el" "demo-2.el"))))
 
+(ert-deftest elpakit/files-to-elisp ()
+  "What files in the package are elisp?
+
+Even when we have elisp files that should not be listed, like in
+\"fake-package-with-elisp\"."
+  (equal
+   (elpakit/files-to-elisp
+    (elpakit/package-files
+     (elpakit/get-recipe "fake-package-with-elisp"))
+    "fake-package-with-elisp")
+   (list
+    (expand-file-name
+     "fake-package.el"
+     (expand-file-name "fake-package-with-elisp")))))
+
 (ert-deftest elpakit/file->package ()
   "Test turning a file into a package and the access API."
   ;; First prove we have the right native type

@@ -627,7 +627,7 @@ Opens the directory the package has been built in."
   (assert (file-directory-p package-dir))
   (let* ((recipe (elpakit/get-recipe package-dir))
          (files (elpakit/package-files recipe))
-         (elisp (elpakit/files-to-elisp files)))
+         (elisp (elpakit/files-to-elisp files package-dir)))
     (loop for file in elisp
        do
          (with-current-buffer
@@ -1368,9 +1368,15 @@ you."
 
 ;;; Other tools on top of elpakit
 
-(defun elpakit/files-to-elisp (list-of-files)
-  (-filter
-   (lambda (e) (string-match-p ".*\\.el$" e)) list-of-files))
+(defun elpakit/files-to-elisp (list-of-files package-dir)
+  "Return just the package elisp files from LIST-OF-FILES.
+
+The package elisp files are those that are in the root of the
+PACKAGE-DIR."
+  (let* ((dir (file-name-as-directory (expand-file-name package-dir)))
+         (re (rx-to-string
+              `(and ,dir (1+ (not (any "/"))) ".el"))))
+    (-filter (lambda (e) (string-match-p re e)) list-of-files)))
 
 (defun elpakit-multi-occur (buffer thing)
   "Multi-occur the current symbol using the current Elpakit.
@@ -1385,7 +1391,7 @@ All lisp files in the current elpakit are considered.
     (current-buffer)
     (thing-at-point 'symbol)))
   (let* ((files (elpakit/package-files (elpakit/get-recipe ".")))
-         (elisp (elpakit/files-to-elisp files))
+         (elisp (elpakit/files-to-elisp files "."))
          (elisp-buffers
           (loop for filename in elisp
              collect (find-file-noselect filename))))
