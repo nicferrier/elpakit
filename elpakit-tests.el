@@ -54,7 +54,8 @@
   "Show what an inferred recipe will look like."
   ;; A single file package - easy to infer
   (equal
-   (elpakit-test/fake-git-files "emacs-db" (elpakit/infer-recipe "emacs-db"))
+   (elpakit-test/fake-git-files "emacs-db"
+     (elpakit/infer-recipe "emacs-db"))
    '("db" :files ("db.el") :test (:files ("db-tests.el"))))
   ;; A recipe we can't infer because there's no version
   (equal
