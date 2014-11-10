@@ -44,7 +44,8 @@
 
 (defmacro elpakit-test/fake-git-files (package-dir &rest body)
   "Used to fake `elpakit/git-files' around BODY."
-  (declare (indent 1))
+  (declare (debug (sexp &rest form))
+           (indent 1))
   `(noflet ((elpakit/git-files (package-dir)
               (directory-files package-dir nil "^[^.#].*[^#~]$")))
      ,@body))
