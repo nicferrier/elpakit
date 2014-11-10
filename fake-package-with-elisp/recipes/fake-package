@@ -1,0 +1,9 @@
+(fake-package
+ :version "0.0.1"
+ :doc "this is a fake package for elpakit testing"
+ :files ("fake-package.el"
+
+         ;; This is presumably a dummy file, or data or something; a
+         ;; real test file would probably go in the :test :files
+         ;; section, but that's not the point.
+         "test-stuff/test-file.el"))
