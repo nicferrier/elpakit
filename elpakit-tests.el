@@ -93,13 +93,18 @@ Even when we have elisp files that should not be listed, like in
   ;; First prove we have the right native type
   (should
    (with-elpakit-new-package-api 
-     (package-desc-p (elpakit/file->package "db.el"))
+     (package-desc-p (elpakit/file->package
+                      (expand-file-name
+                       "db.el" (expand-file-name "emacs-db" "."))))
      (vectorp (elpakit/file->package "db.el"))))
   ;; Then prove we've abstracted it
   (should
    (equal
     '("0.0.6" "db")
-    (elpakit/file->package "db.el" :version :name))))
+    (elpakit/file->package
+     (expand-file-name
+      "db.el" (expand-file-name "emacs-db" "."))
+     :version :name))))
 
 (ert-deftest elpakit/package-files ()
   (should
@@ -234,8 +239,15 @@ Even when we have elisp files that should not be listed, like in
     (error nil))
   (should
    (equal
-    '("demo-multifile"
-      ()
+    '("elnode"
+      ((web (0 4 3))
+       (dash (1 1 0))
+       (noflet (0 0 7))
+       (s (1 5 0))
+       (creole (0 8 14))
+       (fakir (0 1 6))
+       (db (0 0 5))
+       (kv (0 0 17)))
       "The Emacs webserver."
       "0.9.9.8.7")
     ;; Return the package info WITHOUT the README
