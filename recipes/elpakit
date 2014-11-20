@@ -1,5 +1,5 @@
 (elpakit
- :version "2.0.2"
+ :version "2.0.3"
  :doc "The ELPA package maintainer's friend"
  :requires
  ((dash "2.9.0")
