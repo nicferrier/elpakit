@@ -203,9 +203,12 @@ Returns a plist with `:elisp-files', `:test-files',
 (defun elpakit/infer-recipe (package-dir)
   "Infer a recipe from the PACKAGE-DIR.
 
-We currently can't make guesses about multi-file packages so
-unless we can work out if the package is a single file package
-this function just errors.
+Inferring the recipe for a single file project is easy.
+Inferring for a multi-file project is harder, this looks for an
+obvious \"-pkg.el\" file and uses that if present.  If a pkg.el
+file cannot be found it opens the elisp files looking for a
+package header and uses that.  If it can't find a package header
+either it gives up and fails; in that case add a recipe.
 
 Test package files are guessed at to produce the :test section of
 the recipe.
@@ -229,35 +232,48 @@ Files mentioned in the recipe are all absolute file names."
            (when test-files
              ;;  (--map (elpakit/absolutize-file-name package-dir it) test-files)
              (list :test (list :files test-files)))))
-        ;; Else we have a multi-file package... try and find the
-        ;; package-info in an elisp-file
-        (let ((info
-               (car-safe
-                (--keep
-                 (condition-case err
-                     (with-temp-buffer
-                       (insert-file-contents (expand-file-name it package-dir))
-                       (emacs-lisp-mode)
-                       (package-buffer-info))
-                   (error nil))
-                 elisp-files))))
-          (if (not info)
-              (error
-               "elpakit - cannot infer package for %s - add a recipe description"
-               package-dir)
-              ;; Else try and construct the package
-              ;;(list (car info))
-              (list*
-               (symbol-name (package-desc-name info))
-               :version (package-version-join (package-desc-version info))
-               :doc (package-desc-summary info)
-               :files
-               (append
-                non-test-elisp
-                other-files) ; (--map (elpakit/absolutize-file-name package-dir it) other-files)
-               (when test-files
-                 ;; (let ((full (--map (elpakit/absolutize-file-name package-dir it) test-files))))
-                 (list :test (list :files test-files)))))))))
+        ;; Else we have a multi-file package...
+        (match (car-safe (--filter (string-match-p "-pkg.el" it) elisp-files))
+          ((? 'stringp filename)
+           (with-temp-buffer
+             (insert-file-contents (expand-file-name filename package-dir))
+             (goto-char (point-min))
+             (match (read (current-buffer))
+               ((list 'define-package name version docstring)
+                (list* name
+                       :version version :doc docstring
+                       :files (append non-test-elisp other-files)
+                       (when test-files
+                         (list :test (list :files test-files))))))))
+          (nil
+           ;; ... try and find the package-info in an elisp-file
+           (let ((info
+                  (car-safe
+                   (--keep
+                    (condition-case err
+                        (with-temp-buffer
+                          (insert-file-contents (expand-file-name it package-dir))
+                          (emacs-lisp-mode)
+                          (package-buffer-info))
+                      (error nil))
+                    elisp-files))))
+             (if (not info)
+                 (error
+                  "elpakit - cannot infer package for %s - add a recipe description"
+                  package-dir)
+                 ;; Else try and construct the package
+                 ;;(list (car info))
+                 (list*
+                  (symbol-name (package-desc-name info))
+                  :version (package-version-join (package-desc-version info))
+                  :doc (package-desc-summary info)
+                  :files
+                  (append
+                   non-test-elisp
+                   other-files) ; (--map (elpakit/absolutize-file-name package-dir it) other-files)
+                  (when test-files
+                    ;; (let ((full (--map (elpakit/absolutize-file-name package-dir it) test-files))))
+                    (list :test (list :files test-files)))))))))))
 
 (defun elpakit/get-recipe (package-dir)
   "Return the recipe for the PACKAGE-DIR.
